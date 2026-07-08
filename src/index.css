@@ -207,11 +207,28 @@ input, select, textarea { font-family: var(--font); }
 .match-hero .big-score { font-family: var(--font-display); font-weight: 800; font-size: 44px; }
 .match-hero .big-score .vs { color: var(--text-dim); font-size: 26px; }
 
-/* ---------- Bracket ---------- */
-.bracket { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; align-items: center; }
-@media (max-width: 700px) { .bracket { grid-template-columns: 1fr; } }
-.bracket-col { display: flex; flex-direction: column; gap: 14px; justify-content: space-around; height: 100%; }
-.bracket-col-title { text-align: center; font-family: var(--font-display); font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-dim); font-size: 14px; }
+/* ---------- Bracket tree ---------- */
+.bracket-scroll { overflow-x: auto; padding-bottom: 10px; }
+.bracket-tree { display: flex; min-width: 780px; }
+.tree-col { flex: 1; display: flex; flex-direction: column; }
+.tree-col + .tree-col { margin-left: 36px; }
+.tree-body { flex: 1; display: flex; flex-direction: column; }
+.tree-pair { flex: 1; display: flex; flex-direction: column; position: relative; }
+.tree-slot { flex: 1; display: flex; flex-direction: column; justify-content: center; position: relative; padding: 8px 0; }
+/* connector lines: stub out of a match, vertical join, stub into the next match */
+.tree-slot.link-out::after {
+  content: ''; position: absolute; right: -18px; top: 50%; width: 18px;
+  border-top: 2px solid var(--border);
+}
+.tree-pair.link-join::after {
+  content: ''; position: absolute; right: -18px; top: 25%; height: 50%;
+  border-right: 2px solid var(--border);
+}
+.tree-slot.link-in::before {
+  content: ''; position: absolute; left: -18px; top: 50%; width: 18px;
+  border-top: 2px solid var(--border);
+}
+.bracket-col-title { text-align: center; font-family: var(--font-display); font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-dim); font-size: 14px; margin-bottom: 10px; }
 .bracket-match { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; display: block; box-shadow: var(--shadow); }
 .bracket-match:hover { border-color: var(--accent); }
 .bracket-match .brow { display: flex; align-items: center; gap: 8px; padding: 5px 0; font-weight: 700; font-size: 14px; }
