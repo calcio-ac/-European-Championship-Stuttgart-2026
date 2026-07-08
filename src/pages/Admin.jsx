@@ -365,6 +365,8 @@ function ScoreRow({ match, onSaved, onError }) {
   const [status, setStatus] = useState(match.status)
   const [homeTeamId, setHomeTeamId] = useState(match.home_team_id || '')
   const [awayTeamId, setAwayTeamId] = useState(match.away_team_id || '')
+  const [motmName, setMotmName] = useState(match.motm_name || '')
+  const [motmPhoto, setMotmPhoto] = useState(match.motm_photo || '')
   const [busy, setBusy] = useState(false)
 
   const isKnockout = match.phase !== 'group'
@@ -380,6 +382,8 @@ function ScoreRow({ match, onSaved, onError }) {
       p_status: status,
       p_home_team_id: isKnockout && homeTeamId ? homeTeamId : null,
       p_away_team_id: isKnockout && awayTeamId ? awayTeamId : null,
+      p_motm_name: motmName.trim(),
+      p_motm_photo: motmPhoto,
     })
     setBusy(false)
     if (error) onError(error.message)
@@ -418,6 +422,22 @@ function ScoreRow({ match, onSaved, onError }) {
         <option value="finished">Finished</option>
       </select>
       <button className="btn small" onClick={save} disabled={busy}>{busy ? '…' : 'Save'}</button>
+      <div className="motm-row">
+        <span className="muted" style={{ fontSize: 12.5, fontWeight: 700, width: 88 }}>Man of the match</span>
+        <input className="input grow" placeholder="Player name (empty to clear)"
+          value={motmName} onChange={(e) => setMotmName(e.target.value)} />
+        <input className="input grow" type="file" accept="image/*"
+          onChange={async (e) => {
+            const f = e.target.files?.[0]
+            if (f) setMotmPhoto(await fileToDataUrl(f, 200))
+          }} />
+        {motmPhoto && (
+          <>
+            <img src={motmPhoto} alt="Man of the match" className="badge" style={{ width: 40, height: 40 }} />
+            <button className="btn secondary small" onClick={() => setMotmPhoto('')}>Remove photo</button>
+          </>
+        )}
+      </div>
     </div>
   )
 }

@@ -82,6 +82,20 @@ export default function Match() {
         </div>
       </div>
 
+      {match.motm_name && (
+        <div className="panel motm-card">
+          {match.motm_photo ? (
+            <img src={match.motm_photo} alt={match.motm_name} className="motm-photo" />
+          ) : (
+            <span className="motm-photo motm-photo-fallback">{match.motm_name[0]}</span>
+          )}
+          <div>
+            <div className="motm-label">Man of the Match</div>
+            <div className="motm-name">{match.motm_name}</div>
+          </div>
+        </div>
+      )}
+
       <h2 className="page-title mt">Lineups</h2>
       <div className="pitch-wrap double">
         <LineupPanel team={home} slot={match.home_slot} lineup={homeLineup} color="home" />

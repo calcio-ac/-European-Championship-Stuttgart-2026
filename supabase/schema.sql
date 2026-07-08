@@ -103,6 +103,8 @@ create table matches (
   home_score int,
   away_score int,
   status text not null default 'scheduled' check (status in ('scheduled','live','finished')),
+  motm_name text,        -- man of the match
+  motm_photo text,       -- small data-URL image
   sort_order int not null
 );
 
@@ -342,7 +344,8 @@ end $$;
 
 create or replace function admin_update_match(
   p_match_id text, p_home_score int, p_away_score int,
-  p_status text, p_home_team_id uuid, p_away_team_id uuid)
+  p_status text, p_home_team_id uuid, p_away_team_id uuid,
+  p_motm_name text default null, p_motm_photo text default null)
 returns void language plpgsql security definer as $$
 begin
   perform check_admin();
@@ -351,7 +354,10 @@ begin
     away_score = p_away_score,
     status = coalesce(p_status, status),
     home_team_id = coalesce(p_home_team_id, home_team_id),
-    away_team_id = coalesce(p_away_team_id, away_team_id)
+    away_team_id = coalesce(p_away_team_id, away_team_id),
+    -- null = leave unchanged, empty string = clear
+    motm_name = case when p_motm_name is null then motm_name else nullif(p_motm_name, '') end,
+    motm_photo = case when p_motm_photo is null then motm_photo else nullif(p_motm_photo, '') end
   where id = p_match_id;
 end $$;
 
@@ -523,7 +529,7 @@ insert into matches (id, phase, round, group_code, ground, kickoff, end_time, ho
   ('F','final',null,null,1,'17:11','17:42','W-SF1','W-SF2',31);
 
 insert into settings (key, value) values
-  ('tournament', '{"name":"European Championship Stuttgart 2026","date":null,"venue":"","organizer":"Stuttgart Indians FC"}'),
+  ('tournament', '{"name":"European Championship Stuttgart 2026","date":"2026-07-25","venue":"","organizer":"Stuttgart Indians FC"}'),
   ('info_sections', '[
     {"title":"Tournament Format","body":"16 teams in 4 groups (A–D). Everyone plays 3 group matches. Top two of each group reach the quarterfinals, followed by semifinals and the grand final."},
     {"title":"Match Duration","body":"Group stage and quarterfinal matches run in 25–27 minute slots. Semifinals and the final are played with 12-minute halves."},

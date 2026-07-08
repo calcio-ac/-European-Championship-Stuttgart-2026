@@ -280,6 +280,27 @@ textarea.input { resize: vertical; min-height: 80px; font-weight: 500; }
 .footer img { width: 30px; height: 30px; object-fit: contain; }
 @media (max-width: 860px) { .footer { margin-bottom: 60px; } }
 
+/* ---------- Man of the match ---------- */
+.motm-card { display: flex; align-items: center; gap: 16px; margin-top: 14px; }
+.motm-photo {
+  width: 72px; height: 72px; border-radius: 50%; object-fit: cover;
+  border: 3px solid var(--gold); flex-shrink: 0;
+}
+.motm-photo-fallback {
+  display: flex; align-items: center; justify-content: center;
+  background: var(--card-2); color: var(--text-dim);
+  font-size: 28px; font-weight: 800;
+}
+.motm-label {
+  font-family: var(--font-display); font-weight: 800; letter-spacing: 1.5px;
+  text-transform: uppercase; font-size: 13px; color: var(--gold-deep);
+}
+.motm-name { font-size: 20px; font-weight: 800; }
+.motm-row {
+  flex-basis: 100%; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  border-top: 1px dashed var(--border); padding-top: 8px; margin-top: 2px;
+}
+
 /* Admin/manager small layouts */
 .list-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
 .list-row:last-child { border-bottom: 0; }
