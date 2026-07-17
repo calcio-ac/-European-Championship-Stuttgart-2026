@@ -335,11 +335,11 @@ function TeamRow({ team, onSaved, onError }) {
         </div>
         <div className="form-row">
           <div className="grow">
-            <label>Team logo (JPG or PNG)</label>
+            <label>Team logo (JPG, JPEG, PNG or WEBP)</label>
             <input
               className="input"
               type="file"
-              accept="image/png,image/jpeg,image/webp,image/*"
+              accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.bmp"
               onChange={(e) => { pickLogo(e.target.files?.[0]); e.target.value = '' }}
             />
           </div>
@@ -555,7 +555,7 @@ function ScoreRow({ match, onSaved, onError }) {
         <span className="muted" style={{ fontSize: 12.5, fontWeight: 700, width: 88 }}>Man of the match</span>
         <input className="input grow" placeholder="Player name (empty to clear)"
           value={motmName} onChange={(e) => setMotmName(e.target.value)} />
-        <input className="input grow" type="file" accept="image/png,image/jpeg,image/webp,image/*"
+        <input className="input grow" type="file" accept="image/*,.jpg,.jpeg,.png,.webp"
           onChange={async (e) => {
             const f = e.target.files?.[0]
             if (!f) return
