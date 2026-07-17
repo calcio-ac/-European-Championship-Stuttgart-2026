@@ -247,11 +247,28 @@ function TeamRow({ team, onSaved, onError }) {
 
   const pickLogo = async (file) => {
     if (!file) return
+    setLocalMsg({ type: 'info', text: 'Reading image…' })
+    let dataUrl
     try {
-      setLogo(await fileToDataUrl(file))
-      setLocalMsg({ type: 'ok', text: 'Logo ready — now press Save.' })
+      dataUrl = await fileToDataUrl(file)
     } catch (err) {
-      setLocalMsg({ type: 'error', text: err.message })
+      return setLocalMsg({ type: 'error', text: err.message })
+    }
+    setLogo(dataUrl)
+    // save the logo immediately - no extra Save click needed
+    setLocalMsg({ type: 'info', text: 'Uploading logo…' })
+    const { error } = await supabase.rpc('admin_upsert_team', {
+      p_id: team.id,
+      p_name: team.name,
+      p_short_name: team.short_name || null,
+      p_group_code: team.group_code,
+      p_seed: team.seed,
+      p_logo_url: dataUrl,
+    })
+    if (error) setLocalMsg({ type: 'error', text: `Logo NOT saved: ${error.message}` })
+    else {
+      setLocalMsg({ type: 'ok', text: 'Logo saved!' })
+      onSaved(`Logo saved for ${team.name}.`)
     }
   }
 
