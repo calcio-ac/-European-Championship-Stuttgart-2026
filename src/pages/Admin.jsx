@@ -4,6 +4,7 @@ import { useData, GROUPS, PHASE_LABELS } from '../lib/data.jsx'
 import TeamBadge from '../components/TeamBadge.jsx'
 import SheetEditor from '../components/SheetEditor.jsx'
 import SquadEditor from '../components/SquadEditor.jsx'
+import LogoCropper from '../components/LogoCropper.jsx'
 
 /** Downscale an image file to a small square data URL we can store directly in the DB. */
 function fileToDataUrl(file, size = 128) {
@@ -245,17 +246,20 @@ function TeamRow({ team, onSaved, onError }) {
     setLogo(team.logo_url || '')
   }, [team])
 
-  const pickLogo = async (file) => {
+  const [cropSrc, setCropSrc] = useState(null)
+
+  const pickLogo = (file) => {
     if (!file) return
-    setLocalMsg({ type: 'info', text: 'Reading image…' })
-    let dataUrl
-    try {
-      dataUrl = await fileToDataUrl(file)
-    } catch (err) {
-      return setLocalMsg({ type: 'error', text: err.message })
-    }
+    const reader = new FileReader()
+    reader.onload = () => setCropSrc(reader.result)
+    reader.onerror = () => setLocalMsg({ type: 'error', text: `Could not read "${file.name}".` })
+    reader.readAsDataURL(file)
+  }
+
+  // save the logo immediately once cropped - no extra Save click needed
+  const uploadLogo = async (dataUrl) => {
+    setCropSrc(null)
     setLogo(dataUrl)
-    // save the logo immediately - no extra Save click needed
     setLocalMsg({ type: 'info', text: 'Uploading logo…' })
     const { error } = await supabase.rpc('admin_upsert_team', {
       p_id: team.id,
@@ -336,12 +340,16 @@ function TeamRow({ team, onSaved, onError }) {
               className="input"
               type="file"
               accept="image/png,image/jpeg,image/webp,image/*"
-              onChange={(e) => pickLogo(e.target.files?.[0])}
+              onChange={(e) => { pickLogo(e.target.files?.[0]); e.target.value = '' }}
             />
           </div>
           {logo && <img src={logo} alt="logo" className="badge" style={{ width: 42, height: 42 }} />}
+          {logo && !cropSrc && (
+            <button className="btn secondary small" onClick={() => setCropSrc(logo)}>Adjust crop / zoom</button>
+          )}
           {logo && <button className="btn secondary small" onClick={() => setLogo('')}>Remove logo</button>}
         </div>
+        {cropSrc && <LogoCropper src={cropSrc} onSave={uploadLogo} onCancel={() => setCropSrc(null)} />}
         {localMsg && <div className={`alert ${localMsg.type}`}>{localMsg.text}</div>}
         <div className="form-row">
           <button className="btn small" onClick={save} disabled={busy || !name.trim()}>{busy ? 'Saving…' : 'Save'}</button>
