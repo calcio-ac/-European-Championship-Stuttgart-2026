@@ -39,7 +39,7 @@ export default function Team() {
         <TeamBadge team={team} label={slot} size={64} />
         <div>
           <h1 className="page-title" style={{ margin: 0 }}>{team.name}</h1>
-          <div className="muted">Group {team.group_code}</div>
+          <div className="muted">{team.group_code ? `Group ${team.group_code}` : 'Group draw pending'}</div>
         </div>
       </div>
 

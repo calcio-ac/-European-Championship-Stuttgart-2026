@@ -143,59 +143,117 @@ function Dashboard({ email }) {
 function TeamsTab() {
   const { teams, refresh } = useData()
   const [msg, setMsg] = useState(null)
+  const onSaved = (text) => { setMsg({ type: 'ok', text }); refresh() }
+  const onError = (text) => setMsg({ type: 'error', text })
+
+  const unassigned = teams.filter((t) => !t.group_code)
 
   return (
     <>
       {msg && <div className={`alert ${msg.type}`}>{msg.text}</div>}
-      <div className="match-list" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(480px, 100%), 1fr))' }}>
-        {GROUPS.map((g) => (
-          <div key={g} className="panel">
-            <h2>Group {g}</h2>
-            {[1, 2, 3, 4].map((seed) => (
-              <TeamSeat
-                key={`${g}${seed}`}
-                group={g}
-                seed={seed}
-                team={teams.find((t) => t.group_code === g && t.seed === seed)}
-                onSaved={(text) => { setMsg({ type: 'ok', text }); refresh() }}
-                onError={(text) => setMsg({ type: 'error', text })}
-              />
-            ))}
-          </div>
+
+      <div className="panel">
+        <h2>Group Draw</h2>
+        <p className="muted">
+          Once the draw is made, assign each team to a seat. The fixtures, standings, and manager
+          match lists fill in automatically. {unassigned.length > 0 && <b>{unassigned.length} team(s) still undrawn.</b>}
+        </p>
+        <div className="match-list" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(420px, 100%), 1fr))' }}>
+          {GROUPS.map((g) => (
+            <div key={g}>
+              <h3>Group {g}</h3>
+              {[1, 2, 3, 4].map((seed) => (
+                <DrawSeat key={`${g}${seed}`} group={g} seed={seed}
+                  team={teams.find((t) => t.group_code === g && t.seed === seed)}
+                  unassigned={unassigned} onSaved={onSaved} onError={onError} />
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="panel">
+        <h2>All Teams ({teams.length})</h2>
+        <p className="muted">Edit each team's name, logo, and manager password here.</p>
+        {teams.map((t) => (
+          <TeamRow key={t.id} team={t} onSaved={onSaved} onError={onError} />
         ))}
+        <AddTeamRow onSaved={onSaved} onError={onError} />
       </div>
     </>
   )
 }
 
-function TeamSeat({ group, seed, team, onSaved, onError }) {
+function DrawSeat({ group, seed, team, unassigned, onSaved, onError }) {
+  const [pick, setPick] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  const assign = async (teamId, g, s, note) => {
+    setBusy(true)
+    const { error } = await supabase.rpc('admin_assign_team', {
+      p_team_id: teamId, p_group_code: g, p_seed: s,
+    })
+    setBusy(false)
+    if (error) onError(error.message)
+    else { setPick(''); onSaved(note) }
+  }
+
+  return (
+    <div className="list-row">
+      <span className="muted" style={{ width: 30, fontWeight: 800 }}>{group}{seed}</span>
+      {team ? (
+        <>
+          <TeamBadge team={team} label={`${group}${seed}`} size={26} />
+          <span className="grow" style={{ fontWeight: 700 }}>{team.name}</span>
+          <button className="btn secondary small" disabled={busy}
+            onClick={() => assign(team.id, null, null, `${team.name} removed from ${group}${seed}.`)}>
+            Unassign
+          </button>
+        </>
+      ) : (
+        <>
+          <select className="input grow" value={pick} onChange={(e) => setPick(e.target.value)}>
+            <option value="">Empty seat — pick team…</option>
+            {unassigned.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </select>
+          <button className="btn small" disabled={busy || !pick}
+            onClick={() => assign(pick, group, seed, `Team assigned to ${group}${seed}.`)}>
+            Assign
+          </button>
+        </>
+      )}
+    </div>
+  )
+}
+
+function TeamRow({ team, onSaved, onError }) {
   const [editing, setEditing] = useState(false)
-  const [name, setName] = useState(team?.name || '')
-  const [shortName, setShortName] = useState(team?.short_name || '')
-  const [logo, setLogo] = useState(team?.logo_url || '')
+  const [name, setName] = useState(team.name)
+  const [shortName, setShortName] = useState(team.short_name || '')
+  const [logo, setLogo] = useState(team.logo_url || '')
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
-    setName(team?.name || '')
-    setShortName(team?.short_name || '')
-    setLogo(team?.logo_url || '')
+    setName(team.name)
+    setShortName(team.short_name || '')
+    setLogo(team.logo_url || '')
   }, [team])
 
   const save = async () => {
     setBusy(true)
     const { error } = await supabase.rpc('admin_upsert_team', {
-      p_id: team?.id || null,
+      p_id: team.id,
       p_name: name,
       p_short_name: shortName || null,
-      p_group_code: group,
-      p_seed: seed,
+      p_group_code: team.group_code,
+      p_seed: team.seed,
       p_logo_url: logo || null,
     })
     setBusy(false)
     if (error) onError(error.message)
     else {
       setEditing(false)
-      onSaved(`Saved ${name} (${group}${seed}).`)
+      onSaved(`Saved ${name}.`)
     }
   }
 
@@ -209,13 +267,15 @@ function TeamSeat({ group, seed, team, onSaved, onError }) {
   if (!editing) {
     return (
       <div className="list-row">
-        <span className="muted" style={{ width: 30, fontWeight: 800 }}>{group}{seed}</span>
-        <TeamBadge team={team} label={`${group}${seed}`} size={28} />
+        <TeamBadge team={team} size={28} />
         <span className="grow" style={{ fontWeight: 700 }}>
-          {team ? team.name : <span className="muted">Empty slot — add team</span>}
+          {team.name}
+          <span className="muted" style={{ marginLeft: 8, fontSize: 12, fontWeight: 700 }}>
+            {team.group_code ? `${team.group_code}${team.seed}` : 'undrawn'}
+          </span>
         </span>
-        <button className="btn secondary small" onClick={() => setEditing(true)}>{team ? 'Edit' : 'Add'}</button>
-        {team && <button className="btn danger small" onClick={remove}>Delete</button>}
+        <button className="btn secondary small" onClick={() => setEditing(true)}>Edit</button>
+        <button className="btn danger small" onClick={remove}>Delete</button>
       </div>
     )
   }
@@ -225,8 +285,8 @@ function TeamSeat({ group, seed, team, onSaved, onError }) {
       <div className="form-grid" style={{ width: '100%' }}>
         <div className="form-row">
           <div className="grow">
-            <label>Team name ({group}{seed})</label>
-            <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. FC Example Stuttgart" />
+            <label>Team name</label>
+            <input className="input" value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           <div style={{ width: 110 }}>
             <label>Short name</label>
@@ -247,13 +307,40 @@ function TeamSeat({ group, seed, team, onSaved, onError }) {
             />
           </div>
           {logo && <img src={logo} alt="logo" className="badge" style={{ width: 42, height: 42 }} />}
+          {logo && <button className="btn secondary small" onClick={() => setLogo('')}>Remove logo</button>}
         </div>
         <div className="form-row">
           <button className="btn small" onClick={save} disabled={busy || !name.trim()}>{busy ? 'Saving…' : 'Save'}</button>
           <button className="btn secondary small" onClick={() => setEditing(false)}>Cancel</button>
         </div>
-        {team && <ManagerPassword team={team} onSaved={onSaved} onError={onError} />}
+        <ManagerPassword team={team} onSaved={onSaved} onError={onError} />
       </div>
+    </div>
+  )
+}
+
+function AddTeamRow({ onSaved, onError }) {
+  const [name, setName] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  const add = async () => {
+    setBusy(true)
+    const { error } = await supabase.rpc('admin_upsert_team', {
+      p_id: null, p_name: name, p_short_name: null,
+      p_group_code: null, p_seed: null, p_logo_url: null,
+    })
+    setBusy(false)
+    if (error) onError(error.message)
+    else { setName(''); onSaved(`Added ${name}.`) }
+  }
+
+  return (
+    <div className="form-row mt">
+      <div className="grow">
+        <input className="input" value={name} placeholder="New team name"
+          onChange={(e) => setName(e.target.value)} />
+      </div>
+      <button className="btn secondary" onClick={add} disabled={busy || !name.trim()}>+ Add team</button>
     </div>
   )
 }
@@ -461,7 +548,9 @@ function AdminSheetsTab() {
         <select className="input" value={teamId} onChange={(e) => setTeamId(e.target.value)} style={{ maxWidth: 340 }}>
           <option value="">Select team…</option>
           {teams.map((t) => (
-            <option key={t.id} value={t.id}>{t.group_code}{t.seed} · {t.name}</option>
+            <option key={t.id} value={t.id}>
+              {t.group_code ? `${t.group_code}${t.seed} · ` : ''}{t.name}
+            </option>
           ))}
         </select>
       </div>

@@ -280,6 +280,20 @@ textarea.input { resize: vertical; min-height: 80px; font-weight: 500; }
 .footer img { width: 30px; height: 30px; object-fit: contain; }
 @media (max-width: 860px) { .footer { margin-bottom: 60px; } }
 
+/* ---------- Participating teams ---------- */
+.teams-grid {
+  display: grid; gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
+.team-tile {
+  background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+  box-shadow: var(--shadow); padding: 16px 10px;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  text-align: center; font-weight: 700; font-size: 13.5px;
+  transition: transform .12s, border-color .12s;
+}
+.team-tile:hover { transform: translateY(-2px); border-color: var(--accent); }
+
 /* ---------- Man of the match ---------- */
 .motm-card { display: flex; align-items: center; gap: 16px; margin-top: 14px; }
 .motm-photo {

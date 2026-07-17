@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useData, GROUPS, PHASE_LABELS } from '../lib/data.jsx'
 import MatchCard from '../components/MatchCard.jsx'
+import TeamBadge from '../components/TeamBadge.jsx'
 
 const PHASE_TABS = [
   { key: 'all', label: 'All Matches' },
@@ -128,6 +130,23 @@ export default function Home() {
           </div>
         </div>
       ))}
+
+      {teams.length > 0 && (
+        <>
+          <div className="round-title">Participating Teams</div>
+          <div className="teams-grid">
+            {teams.map((t) => (
+              <Link key={t.id} to={`/team/${t.id}`} className="team-tile">
+                <TeamBadge team={t} size={46} />
+                <span>{t.name}</span>
+                <span className="muted" style={{ fontSize: 12, fontWeight: 700 }}>
+                  {t.group_code ? `Group ${t.group_code}` : 'Draw pending'}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </>
+      )}
     </>
   )
 }

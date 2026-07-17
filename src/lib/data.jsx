@@ -21,7 +21,7 @@ export function DataProvider({ children }) {
 
   const refresh = useCallback(async () => {
     const [t, m, s] = await Promise.all([
-      supabase.from('teams').select('*').order('group_code').order('seed'),
+      supabase.from('teams').select('*').order('name'),
       supabase.from('matches').select('*').order('sort_order'),
       supabase.from('settings').select('*'),
     ])
@@ -50,7 +50,9 @@ export function DataProvider({ children }) {
   const teamById = useMemo(() => Object.fromEntries(teams.map((t) => [t.id, t])), [teams])
   const teamBySlot = useMemo(() => {
     const map = {}
-    for (const t of teams) map[`${t.group_code}${t.seed}`] = t
+    for (const t of teams) {
+      if (t.group_code && t.seed) map[`${t.group_code}${t.seed}`] = t
+    }
     return map
   }, [teams])
 

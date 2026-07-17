@@ -55,16 +55,20 @@ create extension if not exists pgcrypto;
 -- Tables
 -- ------------------------------------------------------------
 
+-- group_code/seed stay null until the group draw is made.
 create table teams (
   id uuid primary key default gen_random_uuid(),
   name text not null,
   short_name text,
-  group_code text not null check (group_code in ('A','B','C','D')),
-  seed int not null check (seed between 1 and 4),
+  group_code text check (group_code in ('A','B','C','D')),
+  seed int check (seed between 1 and 4),
   logo_url text,
-  created_at timestamptz default now(),
-  unique (group_code, seed)
+  created_at timestamptz default now()
 );
+
+create unique index teams_group_seat_unique
+  on teams (group_code, seed)
+  where group_code is not null and seed is not null;
 
 -- Manager passwords, set by the admin; no select policy => invisible to the public API.
 create table team_auth (
@@ -315,6 +319,22 @@ begin
   delete from teams where id = p_team_id;
 end $$;
 
+-- Assign a team to a group seat (or pass nulls to unassign).
+create or replace function admin_assign_team(p_team_id uuid, p_group_code text, p_seed int)
+returns void language plpgsql security definer as $$
+begin
+  perform check_admin();
+  if p_group_code is null or p_seed is null then
+    update teams set group_code = null, seed = null where id = p_team_id;
+  else
+    if exists (select 1 from teams
+               where group_code = p_group_code and seed = p_seed and id <> p_team_id) then
+      raise exception 'Seat % is already taken - unassign that team first', p_group_code || p_seed;
+    end if;
+    update teams set group_code = p_group_code, seed = p_seed where id = p_team_id;
+  end if;
+end $$;
+
 -- Set (or replace) the manager password for a team.
 create or replace function admin_set_team_password(p_team_id uuid, p_new_password text)
 returns void language plpgsql security definer as $$
@@ -527,6 +547,25 @@ insert into matches (id, phase, round, group_code, ground, kickoff, end_time, ho
   ('SF2','semifinal',null,null,2,'16:10','16:41','W-QF2','W-QF4',30),
   -- Final
   ('F','final',null,null,1,'17:11','17:42','W-SF1','W-SF2',31);
+
+-- The 16 participating teams (group seats stay empty until the draw)
+insert into teams (name, short_name) values
+  ('MSV Dortmund', 'MSV'),
+  ('FC Westphalia Aachen', 'FWA'),
+  ('Neckar Zollern FC Kerala', 'NZFC'),
+  ('Frankfurter FC Kerala', 'FFC'),
+  ('Sporting Mallus Regensburg', 'SMR'),
+  ('Stuttgart Indians FC', 'SIFC'),
+  ('Stuttgart Indians FC Deux', 'SIF2'),
+  ('Phoenix FC Malta', 'PFC'),
+  ('Churuli FC', 'CFC'),
+  ('Minnal Bayern FC', 'MBFC'),
+  ('Inter Freiburg FC', 'IFR'),
+  ('Schopfheim Blitz Basel', 'SBB'),
+  ('FC Ellwangen', 'FCE'),
+  ('Otto FC Magdeburg A', 'OFMA'),
+  ('Otto FC Magdeburg B', 'OFMB'),
+  ('United Saar FC', 'USFC');
 
 insert into settings (key, value) values
   ('tournament', '{"name":"European Championship Stuttgart 2026","date":"2026-07-25","venue":"","organizer":"Stuttgart Indians FC"}'),
