@@ -12,6 +12,7 @@ function sectionTitle(match) {
 
 export default function Home() {
   const { matches, teams, settings, loading } = useData()
+  const [knockoutsOnly, setKnockoutsOnly] = useState(false)
   const [ground, setGround] = useState('all')
   const [group, setGroup] = useState('all')
   const [teamId, setTeamId] = useState(() => localStorage.getItem('myTeam') || 'all')
@@ -26,6 +27,7 @@ export default function Home() {
 
   const filtered = useMemo(() => {
     return matches.filter((m) => {
+      if (knockoutsOnly && m.phase === 'group') return false
       if (ground !== 'all' && String(m.ground) !== ground) return false
       if (group !== 'all' && m.group_code !== group) return false
       if (teamId !== 'all') {
@@ -39,7 +41,7 @@ export default function Home() {
       }
       return true
     })
-  }, [matches, teams, ground, group, teamId])
+  }, [matches, teams, knockoutsOnly, ground, group, teamId])
 
   // Group into titled sections that follow the schedule order
   const sections = useMemo(() => {
@@ -74,6 +76,13 @@ export default function Home() {
       </section>
 
       <div className="filters">
+        <button
+          type="button"
+          className={`chip-btn ${knockoutsOnly ? 'active' : ''}`}
+          onClick={() => setKnockoutsOnly(!knockoutsOnly)}
+        >
+          Knockouts
+        </button>
         <select className="filter-select" value={ground} onChange={(e) => setGround(e.target.value)}>
           <option value="all">Both grounds</option>
           <option value="1">Ground 1</option>
