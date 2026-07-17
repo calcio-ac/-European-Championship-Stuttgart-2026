@@ -9,6 +9,7 @@ import SquadEditor from '../components/SquadEditor.jsx'
 function fileToDataUrl(file, size = 128) {
   return new Promise((resolve, reject) => {
     const img = new Image()
+    const url = URL.createObjectURL(file)
     img.onload = () => {
       const canvas = document.createElement('canvas')
       canvas.width = size
@@ -18,10 +19,14 @@ function fileToDataUrl(file, size = 128) {
       const w = img.width * scale
       const h = img.height * scale
       ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h)
+      URL.revokeObjectURL(url)
       resolve(canvas.toDataURL('image/png'))
     }
-    img.onerror = reject
-    img.src = URL.createObjectURL(file)
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      reject(new Error(`Could not read "${file.name}" — use a JPG or PNG image (HEIC photos from iPhone are not supported by browsers).`))
+    }
+    img.src = url
   })
 }
 
@@ -232,6 +237,7 @@ function TeamRow({ team, onSaved, onError }) {
   const [shortName, setShortName] = useState(team.short_name || '')
   const [logo, setLogo] = useState(team.logo_url || '')
   const [busy, setBusy] = useState(false)
+  const [localMsg, setLocalMsg] = useState(null)
 
   useEffect(() => {
     setName(team.name)
@@ -239,8 +245,19 @@ function TeamRow({ team, onSaved, onError }) {
     setLogo(team.logo_url || '')
   }, [team])
 
+  const pickLogo = async (file) => {
+    if (!file) return
+    try {
+      setLogo(await fileToDataUrl(file))
+      setLocalMsg({ type: 'ok', text: 'Logo ready — now press Save.' })
+    } catch (err) {
+      setLocalMsg({ type: 'error', text: err.message })
+    }
+  }
+
   const save = async () => {
     setBusy(true)
+    setLocalMsg(null)
     const { error } = await supabase.rpc('admin_upsert_team', {
       p_id: team.id,
       p_name: name,
@@ -250,8 +267,10 @@ function TeamRow({ team, onSaved, onError }) {
       p_logo_url: logo || null,
     })
     setBusy(false)
-    if (error) onError(error.message)
-    else {
+    if (error) {
+      setLocalMsg({ type: 'error', text: error.message })
+      onError(error.message)
+    } else {
       setEditing(false)
       onSaved(`Saved ${name}.`)
     }
@@ -295,20 +314,18 @@ function TeamRow({ team, onSaved, onError }) {
         </div>
         <div className="form-row">
           <div className="grow">
-            <label>Team logo</label>
+            <label>Team logo (JPG or PNG)</label>
             <input
               className="input"
               type="file"
-              accept="image/*"
-              onChange={async (e) => {
-                const f = e.target.files?.[0]
-                if (f) setLogo(await fileToDataUrl(f))
-              }}
+              accept="image/png,image/jpeg,image/webp,image/*"
+              onChange={(e) => pickLogo(e.target.files?.[0])}
             />
           </div>
           {logo && <img src={logo} alt="logo" className="badge" style={{ width: 42, height: 42 }} />}
           {logo && <button className="btn secondary small" onClick={() => setLogo('')}>Remove logo</button>}
         </div>
+        {localMsg && <div className={`alert ${localMsg.type}`}>{localMsg.text}</div>}
         <div className="form-row">
           <button className="btn small" onClick={save} disabled={busy || !name.trim()}>{busy ? 'Saving…' : 'Save'}</button>
           <button className="btn secondary small" onClick={() => setEditing(false)}>Cancel</button>
@@ -513,10 +530,15 @@ function ScoreRow({ match, onSaved, onError }) {
         <span className="muted" style={{ fontSize: 12.5, fontWeight: 700, width: 88 }}>Man of the match</span>
         <input className="input grow" placeholder="Player name (empty to clear)"
           value={motmName} onChange={(e) => setMotmName(e.target.value)} />
-        <input className="input grow" type="file" accept="image/*"
+        <input className="input grow" type="file" accept="image/png,image/jpeg,image/webp,image/*"
           onChange={async (e) => {
             const f = e.target.files?.[0]
-            if (f) setMotmPhoto(await fileToDataUrl(f, 200))
+            if (!f) return
+            try {
+              setMotmPhoto(await fileToDataUrl(f, 200))
+            } catch (err) {
+              onError(err.message)
+            }
           }} />
         {motmPhoto && (
           <>
