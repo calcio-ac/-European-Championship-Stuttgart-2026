@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useData, GROUPS, PHASE_LABELS } from '../lib/data.jsx'
 import MatchCard from '../components/MatchCard.jsx'
 import TeamBadge from '../components/TeamBadge.jsx'
+import Sponsors from '../components/Sponsors.jsx'
 
 const PHASE_TABS = [
   { key: 'all', label: 'All Matches' },
@@ -147,6 +148,8 @@ export default function Home() {
           </div>
         </>
       )}
+
+      <Sponsors />
     </>
   )
 }
