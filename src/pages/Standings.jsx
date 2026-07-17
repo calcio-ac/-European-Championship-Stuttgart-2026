@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useData, GROUPS, computeStandings, slotLabel } from '../lib/data.jsx'
 import TeamBadge from '../components/TeamBadge.jsx'
+import { SponsorsMarquee } from '../components/Sponsors.jsx'
 
 export default function Standings() {
   const { matches, teamBySlot, loading } = useData()
@@ -67,6 +68,7 @@ export default function Standings() {
           )
         })}
       </div>
+      <SponsorsMarquee />
     </>
   )
 }

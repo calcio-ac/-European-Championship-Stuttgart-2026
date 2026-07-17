@@ -1,4 +1,5 @@
 import { useData } from '../lib/data.jsx'
+import { SponsorsMarquee } from '../components/Sponsors.jsx'
 
 export default function Info() {
   const { settings, loading } = useData()
@@ -25,6 +26,7 @@ export default function Info() {
       {sections.length === 0 && (
         <div className="alert info">No info published yet. The organizer can add sections in the Admin dashboard.</div>
       )}
+      <SponsorsMarquee />
     </>
   )
 }

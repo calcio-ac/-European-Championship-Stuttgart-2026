@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useData, resolveTeam, slotLabel } from '../lib/data.jsx'
 import TeamBadge from '../components/TeamBadge.jsx'
+import { SponsorsMarquee } from '../components/Sponsors.jsx'
 
 function BracketMatch({ match }) {
   const { teamById, teamBySlot } = useData()
@@ -87,6 +88,7 @@ export default function Knockouts() {
       <p className="muted mt">
         Pairings fill in automatically as group games and knockout rounds finish. Trophy ceremony at 17:45.
       </p>
+      <SponsorsMarquee />
     </>
   )
 }

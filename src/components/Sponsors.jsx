@@ -35,6 +35,26 @@ function SponsorCard({ sponsor, large }) {
   )
 }
 
+/** Continuously flowing banner with every sponsor, for secondary pages. */
+export function SponsorsMarquee() {
+  const items = [...MAIN_SPONSORS, ...CO_SPONSORS]
+  return (
+    <div className="sponsor-marquee" aria-label="Sponsors">
+      <div className="sponsor-marquee-track">
+        {[0, 1].map((dup) => (
+          <div className="sponsor-marquee-half" key={dup} aria-hidden={dup === 1}>
+            {items.map((s) => (
+              <div key={s.file} className="sponsor-card marquee-item" title={s.name}>
+                <img src={`/sponsors/${s.file}`} alt={s.name} loading="lazy" />
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function Sponsors() {
   return (
     <section className="sponsors">
