@@ -5,12 +5,6 @@ import MatchCard from '../components/MatchCard.jsx'
 import TeamBadge from '../components/TeamBadge.jsx'
 import Sponsors from '../components/Sponsors.jsx'
 
-const PHASE_TABS = [
-  { key: 'all', label: 'All Matches' },
-  { key: 'group', label: 'Group Stage' },
-  { key: 'knockout', label: 'Knockouts' },
-]
-
 function sectionTitle(match) {
   if (match.phase === 'group') return 'Group Stage'
   return PHASE_LABELS[match.phase] + (match.phase === 'quarterfinal' || match.phase === 'semifinal' ? 's' : '')
@@ -18,7 +12,6 @@ function sectionTitle(match) {
 
 export default function Home() {
   const { matches, teams, settings, loading } = useData()
-  const [phase, setPhase] = useState('all')
   const [ground, setGround] = useState('all')
   const [group, setGroup] = useState('all')
   const [teamId, setTeamId] = useState(() => localStorage.getItem('myTeam') || 'all')
@@ -33,8 +26,6 @@ export default function Home() {
 
   const filtered = useMemo(() => {
     return matches.filter((m) => {
-      if (phase === 'group' && m.phase !== 'group') return false
-      if (phase === 'knockout' && m.phase === 'group') return false
       if (ground !== 'all' && String(m.ground) !== ground) return false
       if (group !== 'all' && m.group_code !== group) return false
       if (teamId !== 'all') {
@@ -48,7 +39,7 @@ export default function Home() {
       }
       return true
     })
-  }, [matches, teams, phase, ground, group, teamId])
+  }, [matches, teams, ground, group, teamId])
 
   // Group into titled sections that follow the schedule order
   const sections = useMemo(() => {
@@ -83,13 +74,6 @@ export default function Home() {
       </section>
 
       <div className="filters">
-        <div className="seg">
-          {PHASE_TABS.map((t) => (
-            <button key={t.key} className={phase === t.key ? 'active' : ''} onClick={() => setPhase(t.key)}>
-              {t.label}
-            </button>
-          ))}
-        </div>
         <select className="filter-select" value={ground} onChange={(e) => setGround(e.target.value)}>
           <option value="all">Both grounds</option>
           <option value="1">Ground 1</option>
