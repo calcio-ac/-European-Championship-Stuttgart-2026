@@ -12,14 +12,13 @@ const PHASE_TABS = [
 ]
 
 function sectionTitle(match) {
-  if (match.phase === 'group') return `Round ${match.round}`
+  if (match.phase === 'group') return 'Group Stage'
   return PHASE_LABELS[match.phase] + (match.phase === 'quarterfinal' || match.phase === 'semifinal' ? 's' : '')
 }
 
 export default function Home() {
   const { matches, teams, settings, loading } = useData()
   const [phase, setPhase] = useState('all')
-  const [round, setRound] = useState('all')
   const [ground, setGround] = useState('all')
   const [group, setGroup] = useState('all')
   const [teamId, setTeamId] = useState(() => localStorage.getItem('myTeam') || 'all')
@@ -36,7 +35,6 @@ export default function Home() {
     return matches.filter((m) => {
       if (phase === 'group' && m.phase !== 'group') return false
       if (phase === 'knockout' && m.phase === 'group') return false
-      if (round !== 'all' && String(m.round) !== round) return false
       if (ground !== 'all' && String(m.ground) !== ground) return false
       if (group !== 'all' && m.group_code !== group) return false
       if (teamId !== 'all') {
@@ -50,7 +48,7 @@ export default function Home() {
       }
       return true
     })
-  }, [matches, teams, phase, round, ground, group, teamId])
+  }, [matches, teams, phase, ground, group, teamId])
 
   // Group into titled sections that follow the schedule order
   const sections = useMemo(() => {
@@ -92,12 +90,6 @@ export default function Home() {
             </button>
           ))}
         </div>
-        <select className="filter-select" value={round} onChange={(e) => setRound(e.target.value)}>
-          <option value="all">All rounds / times</option>
-          {[1, 2, 3, 4, 5, 6].map((r) => (
-            <option key={r} value={r}>Round {r}</option>
-          ))}
-        </select>
         <select className="filter-select" value={ground} onChange={(e) => setGround(e.target.value)}>
           <option value="all">Both grounds</option>
           <option value="1">Ground 1</option>

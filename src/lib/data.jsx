@@ -84,7 +84,7 @@ export function resolveTeam(match, side, teamById, teamBySlot) {
 }
 
 export function matchLabel(match) {
-  if (match.phase === 'group') return `Group ${match.group_code} · Round ${match.round}`
+  if (match.phase === 'group') return `Group ${match.group_code}`
   if (match.phase === 'final') return 'Grand Final'
   return `${PHASE_LABELS[match.phase]} ${match.id.slice(2) || ''}`.trim()
 }
