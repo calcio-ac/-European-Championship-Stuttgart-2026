@@ -343,6 +343,22 @@ textarea.input { resize: vertical; min-height: 80px; font-weight: 500; }
 }
 .team-tile:hover { transform: translateY(-2px); border-color: var(--accent); }
 
+/* ---------- Stats page ---------- */
+.stats-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(340px, 100%), 1fr)); }
+.chart-legend { display: flex; gap: 18px; margin-bottom: 12px; font-size: 13px; font-weight: 700; color: var(--text-dim); }
+.chart-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+.chart { display: grid; gap: 10px; }
+.chart-row { display: grid; grid-template-columns: 150px 1fr; gap: 10px; align-items: center; }
+.chart-label { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.chart-bars { display: grid; gap: 2px; }
+.chart-bar { display: flex; align-items: center; gap: 8px; height: 12px; }
+.chart-fill { height: 100%; min-width: 2px; border-radius: 0 4px 4px 0; }
+.chart-val { font-size: 11.5px; font-weight: 700; color: var(--text-dim); }
+
+.motm-album { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(230px, 100%), 1fr)); }
+.motm-tile { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
+.motm-tile .motm-photo { width: 84px; height: 84px; font-size: 32px; }
+
 /* ---------- Man of the match ---------- */
 .motm-card { display: flex; align-items: center; gap: 16px; margin-top: 14px; }
 .motm-photo {

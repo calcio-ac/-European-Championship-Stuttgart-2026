@@ -50,14 +50,16 @@ export default function Team() {
         <div className="panel">
           <table className="table">
             <thead>
-              <tr><th className="num">#</th><th>Player</th><th>Position</th></tr>
+              <tr><th className="num">#</th><th>Name</th><th>Position</th><th>Category</th><th>Role</th></tr>
             </thead>
             <tbody>
               {players.map((p) => (
                 <tr key={p.id}>
                   <td className="num pts">{p.shirt_number ?? '–'}</td>
                   <td>{p.name}</td>
-                  <td className="muted">{POSITION_LABELS[p.position] || p.position}</td>
+                  <td className="muted">{p.role === 'manager' ? '–' : POSITION_LABELS[p.position] || p.position}</td>
+                  <td className="muted">{p.category === 'non-keralite' ? 'Non-Keralite' : 'Keralite'}</td>
+                  <td className="muted" style={{ textTransform: 'capitalize' }}>{p.role || 'player'}</td>
                 </tr>
               ))}
             </tbody>

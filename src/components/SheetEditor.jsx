@@ -29,7 +29,7 @@ export default function SheetEditor({ team, save }) {
     setSubs([])
     setMsg(null)
     supabase.from('players').select('*').eq('team_id', team.id).order('shirt_number')
-      .then(({ data }) => setPlayers(data || []))
+      .then(({ data }) => setPlayers((data || []).filter((p) => p.role !== 'manager')))
   }, [team.id])
 
   // Load an existing sheet when a match is picked

@@ -494,13 +494,14 @@ function ScoreRow({ match, onSaved, onError }) {
   const [status, setStatus] = useState(match.status)
   const [homeTeamId, setHomeTeamId] = useState(match.home_team_id || '')
   const [awayTeamId, setAwayTeamId] = useState(match.away_team_id || '')
-  const [motmName, setMotmName] = useState(match.motm_name || '')
-  const [motmPhoto, setMotmPhoto] = useState(match.motm_photo || '')
+  const [showDetails, setShowDetails] = useState(false)
   const [busy, setBusy] = useState(false)
 
   const isKnockout = match.phase !== 'group'
-  const homeName = teamById[match.home_team_id]?.name || teamBySlot[match.home_slot]?.name || match.home_slot
-  const awayName = teamById[match.away_team_id]?.name || teamBySlot[match.away_slot]?.name || match.away_slot
+  const homeTeam = teamById[match.home_team_id] || teamBySlot[match.home_slot]
+  const awayTeam = teamById[match.away_team_id] || teamBySlot[match.away_slot]
+  const homeName = homeTeam?.name || match.home_slot
+  const awayName = awayTeam?.name || match.away_slot
 
   const save = async () => {
     setBusy(true)
@@ -511,8 +512,6 @@ function ScoreRow({ match, onSaved, onError }) {
       p_status: status,
       p_home_team_id: isKnockout && homeTeamId ? homeTeamId : null,
       p_away_team_id: isKnockout && awayTeamId ? awayTeamId : null,
-      p_motm_name: motmName.trim(),
-      p_motm_photo: motmPhoto,
     })
     setBusy(false)
     if (error) onError(error.message)
@@ -551,27 +550,142 @@ function ScoreRow({ match, onSaved, onError }) {
         <option value="finished">Finished</option>
       </select>
       <button className="btn small" onClick={save} disabled={busy}>{busy ? '…' : 'Save'}</button>
-      <div className="motm-row">
-        <span className="muted" style={{ fontSize: 12.5, fontWeight: 700, width: 88 }}>Man of the match</span>
-        <input className="input grow" placeholder="Player name (empty to clear)"
-          value={motmName} onChange={(e) => setMotmName(e.target.value)} />
-        <input className="input grow" type="file" accept="image/*,.jpg,.jpeg,.png,.webp"
-          onChange={async (e) => {
-            const f = e.target.files?.[0]
-            if (!f) return
-            try {
-              setMotmPhoto(await fileToDataUrl(f, 200))
-            } catch (err) {
-              onError(err.message)
-            }
-          }} />
-        {motmPhoto && (
-          <>
-            <img src={motmPhoto} alt="Man of the match" className="badge" style={{ width: 40, height: 40 }} />
-            <button className="btn secondary small" onClick={() => setMotmPhoto('')}>Remove photo</button>
-          </>
-        )}
+      <button className="btn secondary small" onClick={() => setShowDetails(!showDetails)}>
+        {showDetails ? 'Hide details' : 'Details'}
+      </button>
+      {showDetails && (
+        <MatchDetails match={match} homeTeam={homeTeam} awayTeam={awayTeam}
+          onSaved={onSaved} onError={onError} />
+      )}
+    </div>
+  )
+}
+
+/** Per-player goals/assists/cards plus Man of the Match, for one match. */
+function MatchDetails({ match, homeTeam, awayTeam, onSaved, onError }) {
+  const [players, setPlayers] = useState([])
+  const [stats, setStats] = useState({})
+  const [motmId, setMotmId] = useState('')
+  const [motmPhoto, setMotmPhoto] = useState(match.motm_photo || '')
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState(null)
+
+  const teamIds = [homeTeam?.id, awayTeam?.id].filter(Boolean)
+
+  useEffect(() => {
+    if (teamIds.length === 0) return
+    Promise.all([
+      supabase.from('players').select('*').in('team_id', teamIds).order('shirt_number'),
+      supabase.from('match_stats').select('*').eq('match_id', match.id),
+    ]).then(([p, s]) => {
+      const squad = (p.data || []).filter((x) => x.role !== 'manager')
+      setPlayers(squad)
+      const st = {}
+      for (const row of s.data || []) {
+        st[row.player_id] = { goals: row.goals, assists: row.assists, yellows: row.yellows, reds: row.reds }
+      }
+      setStats(st)
+      const motm = squad.find((x) => x.name === match.motm_name)
+      setMotmId(motm ? motm.id : '')
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [match.id, homeTeam?.id, awayTeam?.id])
+
+  if (teamIds.length < 2) {
+    return <div className="alert info" style={{ flexBasis: '100%' }}>Assign both teams to this match first (make the draw / advance winners).</div>
+  }
+  if (players.length === 0) {
+    return <div className="alert info" style={{ flexBasis: '100%' }}>No squads submitted yet for these teams.</div>
+  }
+
+  const getStat = (pid) => stats[pid] || { goals: 0, assists: 0, yellows: 0, reds: 0 }
+  const setStat = (pid, field, val) =>
+    setStats({ ...stats, [pid]: { ...getStat(pid), [field]: val === '' ? 0 : Math.max(0, Number(val)) } })
+
+  const save = async () => {
+    setBusy(true)
+    setMsg(null)
+    const payload = players
+      .map((p) => ({ player_id: p.id, team_id: p.team_id, player_name: p.name, ...getStat(p.id) }))
+      .filter((r) => r.goals + r.assists + r.yellows + r.reds > 0)
+    const motmPlayer = players.find((p) => p.id === motmId)
+    const r1 = await supabase.rpc('admin_save_match_stats', { p_match_id: match.id, p_stats: payload })
+    const r2 = await supabase.rpc('admin_set_motm', {
+      p_match_id: match.id,
+      p_motm_name: motmPlayer?.name || '',
+      p_motm_photo: motmPlayer ? motmPhoto : '',
+    })
+    setBusy(false)
+    const error = r1.error || r2.error
+    if (error) {
+      setMsg({ type: 'error', text: error.message })
+      onError(error.message)
+    } else {
+      setMsg({ type: 'ok', text: 'Match details saved.' })
+      onSaved(`${match.id} details saved.`)
+    }
+  }
+
+  const teamOf = (p) => (p.team_id === homeTeam.id ? homeTeam : awayTeam)
+
+  return (
+    <div style={{ flexBasis: '100%', borderTop: '1px dashed var(--border)', paddingTop: 10 }}>
+      <table className="table">
+        <thead>
+          <tr>
+            <th>Player</th><th>Team</th>
+            <th className="num">Goals</th><th className="num">Assists</th>
+            <th className="num">Yellow</th><th className="num">Red</th>
+          </tr>
+        </thead>
+        <tbody>
+          {players.map((p) => {
+            const s = getStat(p.id)
+            return (
+              <tr key={p.id}>
+                <td>#{p.shirt_number ?? '–'} {p.name}</td>
+                <td className="muted">{teamOf(p).short_name || teamOf(p).name}</td>
+                {['goals', 'assists', 'yellows', 'reds'].map((f) => (
+                  <td key={f} className="num">
+                    <input className="input" style={{ width: 54, padding: '6px 8px' }} type="number" min="0"
+                      value={s[f] || ''} placeholder="0"
+                      onChange={(e) => setStat(p.id, f, e.target.value)} />
+                  </td>
+                ))}
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+      <div className="form-row mt">
+        <div className="grow">
+          <label>Man of the Match</label>
+          <select className="input" value={motmId} onChange={(e) => setMotmId(e.target.value)}>
+            <option value="">None selected</option>
+            {players.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name} ({teamOf(p).short_name || teamOf(p).name})
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="grow">
+          <label>Photo (optional)</label>
+          <input className="input" type="file" accept="image/*,.jpg,.jpeg,.png,.webp"
+            onChange={async (e) => {
+              const f = e.target.files?.[0]
+              if (!f) return
+              try {
+                setMotmPhoto(await fileToDataUrl(f, 200))
+              } catch (err) {
+                setMsg({ type: 'error', text: err.message })
+              }
+            }} />
+        </div>
+        {motmPhoto && <img src={motmPhoto} alt="Man of the match" className="badge" style={{ width: 40, height: 40 }} />}
+        <button className="btn small" onClick={save} disabled={busy}>{busy ? 'Saving…' : 'Save details'}</button>
       </div>
+      {msg && <div className={`alert ${msg.type}`}>{msg.text}</div>}
     </div>
   )
 }

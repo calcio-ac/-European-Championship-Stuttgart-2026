@@ -5,16 +5,18 @@ import Match from './pages/Match.jsx'
 import Standings from './pages/Standings.jsx'
 import Knockouts from './pages/Knockouts.jsx'
 import Team from './pages/Team.jsx'
+import Stats from './pages/Stats.jsx'
 import Info from './pages/Info.jsx'
 import Manager from './pages/Manager.jsx'
 import Admin from './pages/Admin.jsx'
 import { useData } from './lib/data.jsx'
-import { CalendarIcon, TableIcon, BracketIcon, InfoIcon, UserIcon, ShieldIcon } from './components/Icons.jsx'
+import { CalendarIcon, TableIcon, BracketIcon, ChartIcon, InfoIcon, UserIcon, ShieldIcon } from './components/Icons.jsx'
 
 const NAV = [
   { to: '/', label: 'Fixtures', Icon: CalendarIcon },
   { to: '/standings', label: 'Tables', Icon: TableIcon },
   { to: '/knockouts', label: 'Bracket', Icon: BracketIcon },
+  { to: '/stats', label: 'Stats', Icon: ChartIcon },
   { to: '/info', label: 'Info', Icon: InfoIcon },
   { to: '/manager', label: 'Manager', Icon: UserIcon },
   { to: '/admin', label: 'Admin', Icon: ShieldIcon },
@@ -62,6 +64,7 @@ export default function App() {
           <Route path="/standings" element={<Standings />} />
           <Route path="/knockouts" element={<Knockouts />} />
           <Route path="/team/:teamId" element={<Team />} />
+          <Route path="/stats" element={<Stats />} />
           <Route path="/info" element={<Info />} />
           <Route path="/manager" element={<Manager />} />
           <Route path="/admin" element={<Admin />} />
