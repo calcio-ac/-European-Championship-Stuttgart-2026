@@ -50,6 +50,13 @@ export const UserIcon = (p) => (
   </svg>
 )
 
+export const PinIcon = (p) => (
+  <svg {...base} {...p}>
+    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+    <circle cx="12" cy="10" r="3" />
+  </svg>
+)
+
 export const ShieldIcon = (p) => (
   <svg {...base} {...p}>
     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />

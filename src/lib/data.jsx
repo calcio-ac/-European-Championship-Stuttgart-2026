@@ -5,6 +5,12 @@ const DataContext = createContext(null)
 
 export const GROUPS = ['A', 'B', 'C', 'D']
 
+export const VENUE = {
+  address: 'Im Obenhinaus 5, 71384 Weinstadt-Beutelsbach',
+  city: 'Stuttgart',
+  mapsUrl: 'https://maps.app.goo.gl/nrNgmQBxTS7htkgs5',
+}
+
 export const PHASE_LABELS = {
   group: 'Group Stage',
   quarterfinal: 'Quarterfinal',

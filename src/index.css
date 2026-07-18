@@ -82,6 +82,8 @@ input, select, textarea { font-family: var(--font); }
   background: var(--card); border: 1px solid var(--border); color: var(--text);
   padding: 7px 16px; border-radius: 999px; font-weight: 700; font-size: 14px;
 }
+.hero .venue-chip { margin-top: 8px; font-size: 13px; color: var(--accent); }
+.hero .venue-chip:hover { border-color: var(--accent); }
 .hero .presented { margin-top: 10px; color: var(--text-dim); font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 8px; }
 .hero .presented img { width: 26px; height: 26px; object-fit: contain; }
 

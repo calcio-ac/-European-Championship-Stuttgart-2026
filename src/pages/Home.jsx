@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useData, GROUPS, PHASE_LABELS } from '../lib/data.jsx'
+import { useData, GROUPS, PHASE_LABELS, VENUE } from '../lib/data.jsx'
+import { PinIcon } from '../components/Icons.jsx'
 import MatchCard from '../components/MatchCard.jsx'
 import TeamBadge from '../components/TeamBadge.jsx'
 import Sponsors from '../components/Sponsors.jsx'
@@ -66,8 +67,13 @@ export default function Home() {
         <img src="/tournament-logo.png" alt="European Championship Stuttgart 2026" />
         <div>
           <span className="date-chip">
-            {tournament.venue || 'Stuttgart'} · {dateLabel}
+            {VENUE.city} · {dateLabel}
           </span>
+        </div>
+        <div>
+          <a className="date-chip venue-chip" href={VENUE.mapsUrl} target="_blank" rel="noreferrer">
+            <PinIcon width={15} height={15} /> {VENUE.address}
+          </a>
         </div>
         <div className="presented">
           <img src="/club-logo.png" alt="Stuttgart Indians FC" />
