@@ -390,6 +390,7 @@ function AddTeamRow({ onSaved, onError }) {
 /** Set the password the team's manager uses to log in to /manager. */
 function ManagerPassword({ team, onSaved, onError }) {
   const [password, setPassword] = useState('')
+  const [current, setCurrent] = useState(null) // null = not looked up, '' = none set
   const [busy, setBusy] = useState(false)
 
   const save = async () => {
@@ -399,8 +400,15 @@ function ManagerPassword({ team, onSaved, onError }) {
     })
     setBusy(false)
     if (error) return onError(error.message)
+    setCurrent(password) // keep it visible after saving
     setPassword('')
-    onSaved(`Manager password set for ${team.name}. Share it with the manager — they log in by picking "${team.name}" on the Manager page.`)
+    onSaved(`Manager password for ${team.name} is now "${password}". Share it with the manager — they log in by picking "${team.name}" on the Manager page.`)
+  }
+
+  const reveal = async () => {
+    const { data, error } = await supabase.rpc('admin_get_team_password', { p_team_id: team.id })
+    if (error) return onError(error.message)
+    setCurrent(data || '')
   }
 
   return (
@@ -416,7 +424,17 @@ function ManagerPassword({ team, onSaved, onError }) {
         <button className="btn small" onClick={save} disabled={busy || password.length < 4}>
           {busy ? 'Saving…' : 'Set password'}
         </button>
+        <button className="btn secondary small" type="button" onClick={reveal}>
+          Show current
+        </button>
       </div>
+      {current !== null && (
+        <div className="alert info" style={{ marginTop: 8 }}>
+          {current
+            ? <>Current password: <b style={{ fontFamily: 'monospace', fontSize: 15 }}>{current}</b></>
+            : 'No password set for this team yet.'}
+        </div>
+      )}
     </div>
   )
 }

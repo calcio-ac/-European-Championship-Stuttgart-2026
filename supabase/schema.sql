@@ -376,6 +376,16 @@ begin
   perform save_squad_impl(p_team_id, p_players);
 end $$;
 
+-- Read the current manager password of a team (admin only, to re-share).
+create or replace function admin_get_team_password(p_team_id uuid)
+returns text language plpgsql security definer as $$
+declare v_pw text;
+begin
+  perform check_admin();
+  select password into v_pw from team_auth where team_id = p_team_id;
+  return v_pw;
+end $$;
+
 create or replace function admin_save_lineup(
   p_team_id uuid, p_match_id text, p_formation text, p_players jsonb)
 returns void language plpgsql security definer as $$
