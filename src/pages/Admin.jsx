@@ -31,6 +31,15 @@ function fileToDataUrl(file, size = 128) {
   })
 }
 
+/** Upload a file to the public "media" bucket and return its public URL. */
+async function uploadToStorage(file, folder) {
+  const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+  const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safe}`
+  const { error } = await supabase.storage.from('media').upload(path, file, { upsert: false })
+  if (error) throw error
+  return supabase.storage.from('media').getPublicUrl(path).data.publicUrl
+}
+
 export default function Admin() {
   const [session, setSession] = useState(null)
   const [ready, setReady] = useState(false)
@@ -854,17 +863,61 @@ function SettingsTab() {
 
       <div className="panel">
         <h2>Info Page Sections</h2>
-        {sections.map((s, i) => (
-          <div key={i} className="form-grid" style={{ borderBottom: '1px solid var(--border)', padding: '12px 0' }}>
-            <div className="form-row">
-              <input className="input grow" value={s.title} placeholder="Section title"
-                onChange={(e) => setSections(sections.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)))} />
-              <button className="btn danger small" onClick={() => setSections(sections.filter((_, j) => j !== i))}>Remove</button>
+        <p className="muted">Each section can have text, one image, and any number of PDF attachments. Remember to press <b>Save all settings</b> when done.</p>
+        {sections.map((s, i) => {
+          const patch = (changes) => setSections(sections.map((x, j) => (j === i ? { ...x, ...changes } : x)))
+          return (
+            <div key={i} className="form-grid" style={{ borderBottom: '1px solid var(--border)', padding: '14px 0' }}>
+              <div className="form-row">
+                <input className="input grow" value={s.title} placeholder="Section title"
+                  onChange={(e) => patch({ title: e.target.value })} />
+                <button className="btn danger small" onClick={() => setSections(sections.filter((_, j) => j !== i))}>Remove</button>
+              </div>
+              <textarea className="input" value={s.body} placeholder="Section text (optional)"
+                onChange={(e) => patch({ body: e.target.value })} />
+
+              <div className="form-row">
+                <div className="grow">
+                  <label>Image (optional)</label>
+                  <input className="input" type="file" accept="image/*,.jpg,.jpeg,.png,.webp"
+                    onChange={async (e) => {
+                      const f = e.target.files?.[0]
+                      if (!f) return
+                      setMsg({ type: 'info', text: 'Uploading image…' })
+                      try { patch({ image: await uploadToStorage(f, 'info') }); setMsg({ type: 'ok', text: 'Image uploaded — press Save all settings.' }) }
+                      catch (err) { setMsg({ type: 'error', text: err.message }) }
+                      e.target.value = ''
+                    }} />
+                </div>
+                {s.image && <img src={s.image} alt="" className="badge" style={{ width: 46, height: 46, borderRadius: 8 }} />}
+                {s.image && <button className="btn secondary small" onClick={() => patch({ image: null })}>Remove image</button>}
+              </div>
+
+              <div>
+                <label>PDF attachments (optional)</label>
+                {(s.files || []).map((f, fi) => (
+                  <div key={fi} className="list-row">
+                    <span className="grow">{f.name}</span>
+                    <button className="btn danger small"
+                      onClick={() => patch({ files: s.files.filter((_, k) => k !== fi) })}>Remove</button>
+                  </div>
+                ))}
+                <input className="input mt" type="file" accept="application/pdf,.pdf"
+                  onChange={async (e) => {
+                    const f = e.target.files?.[0]
+                    if (!f) return
+                    setMsg({ type: 'info', text: 'Uploading PDF…' })
+                    try {
+                      const url = await uploadToStorage(f, 'info')
+                      patch({ files: [...(s.files || []), { name: f.name, url }] })
+                      setMsg({ type: 'ok', text: 'PDF uploaded — press Save all settings.' })
+                    } catch (err) { setMsg({ type: 'error', text: err.message }) }
+                    e.target.value = ''
+                  }} />
+              </div>
             </div>
-            <textarea className="input" value={s.body} placeholder="Section text"
-              onChange={(e) => setSections(sections.map((x, j) => (j === i ? { ...x, body: e.target.value } : x)))} />
-          </div>
-        ))}
+          )
+        })}
         <div className="form-row mt">
           <button className="btn secondary" onClick={() => setSections([...sections, { title: '', body: '' }])}>+ Add section</button>
           <button className="btn" onClick={saveAll} disabled={busy}>{busy ? 'Saving…' : 'Save all settings'}</button>

@@ -343,6 +343,16 @@ textarea.input { resize: vertical; min-height: 80px; font-weight: 500; }
 }
 .team-tile:hover { transform: translateY(-2px); border-color: var(--accent); }
 
+/* ---------- Info page media ---------- */
+.info-image { display: block; max-width: 100%; border-radius: 12px; margin-top: 14px; border: 1px solid var(--border); }
+.info-files { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.info-file {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--card-2); border: 1px solid var(--border); border-radius: 10px;
+  padding: 10px 14px; font-weight: 700; font-size: 14px; color: var(--accent);
+}
+.info-file:hover { border-color: var(--accent); }
+
 /* ---------- Stats page ---------- */
 .stats-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(340px, 100%), 1fr)); }
 .chart-legend { display: flex; gap: 18px; margin-bottom: 12px; font-size: 13px; font-weight: 700; color: var(--text-dim); }
