@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { useData, resolveTeam, slotLabel, matchLabel } from '../lib/data.jsx'
+import { useData } from '../lib/data.jsx'
 import TeamBadge from '../components/TeamBadge.jsx'
 import { SponsorsMarquee } from '../components/Sponsors.jsx'
 
@@ -9,8 +9,7 @@ const GOALS_COLOR = '#3f62c9'
 const ASSISTS_COLOR = '#b8860b'
 
 export default function Stats() {
-  const { teams, matches, teamById, loading } = useData()
-  const [tab, setTab] = useState('players')
+  const { teams, teamById, loading } = useData()
   const [rows, setRows] = useState([])
 
   useEffect(() => {
@@ -48,13 +47,7 @@ export default function Stats() {
   return (
     <>
       <h1 className="page-title">Statistics</h1>
-      <div className="tabs">
-        <button className={tab === 'players' ? 'active' : ''} onClick={() => setTab('players')}>Player Stats</button>
-        <button className={tab === 'motm' ? 'active' : ''} onClick={() => setTab('motm')}>Man of the Match</button>
-      </div>
-      {tab === 'players'
-        ? <PlayerStats byPlayer={byPlayer} byTeam={byTeam} teamById={teamById} hasData={rows.length > 0} />
-        : <MotmAlbum matches={matches} />}
+      <PlayerStats byPlayer={byPlayer} byTeam={byTeam} teamById={teamById} hasData={rows.length > 0} />
       <SponsorsMarquee />
     </>
   )
@@ -156,42 +149,3 @@ function PlayerStats({ byPlayer, byTeam, teamById, hasData }) {
   )
 }
 
-function MotmAlbum({ matches }) {
-  const { teamById, teamBySlot } = useData()
-  const winners = matches.filter((m) => m.motm_name)
-
-  if (winners.length === 0) {
-    return (
-      <div className="alert info">
-        The Man of the Match album fills up as awards are given out on match day.
-      </div>
-    )
-  }
-
-  return (
-    <div className="motm-album">
-      {winners.map((m) => {
-        const home = resolveTeam(m, 'home', teamById, teamBySlot)
-        const away = resolveTeam(m, 'away', teamById, teamBySlot)
-        const played = m.home_score != null && m.away_score != null
-        return (
-          <div key={m.id} className="panel motm-tile">
-            {m.motm_photo ? (
-              <img src={m.motm_photo} alt={m.motm_name} className="motm-photo" />
-            ) : (
-              <span className="motm-photo motm-photo-fallback">{m.motm_name[0]}</span>
-            )}
-            <div className="motm-label">Man of the Match</div>
-            <div className="motm-name">{m.motm_name}</div>
-            <div className="muted" style={{ fontSize: 13, fontWeight: 600 }}>
-              {home ? home.name : slotLabel(m.home_slot)}
-              {played ? ` ${m.home_score} – ${m.away_score} ` : ' vs '}
-              {away ? away.name : slotLabel(m.away_slot)}
-            </div>
-            <div className="muted" style={{ fontSize: 12 }}>{matchLabel(m)} · {m.kickoff}</div>
-          </div>
-        )
-      })}
-    </div>
-  )
-}

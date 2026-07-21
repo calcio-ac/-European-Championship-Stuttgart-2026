@@ -246,6 +246,8 @@ function TeamRow({ team, onSaved, onError }) {
   const [name, setName] = useState(team.name)
   const [shortName, setShortName] = useState(team.short_name || '')
   const [logo, setLogo] = useState(team.logo_url || '')
+  const [volName, setVolName] = useState(team.volunteer_name || '')
+  const [volPhone, setVolPhone] = useState(team.volunteer_phone || '')
   const [busy, setBusy] = useState(false)
   const [localMsg, setLocalMsg] = useState(null)
 
@@ -253,6 +255,8 @@ function TeamRow({ team, onSaved, onError }) {
     setName(team.name)
     setShortName(team.short_name || '')
     setLogo(team.logo_url || '')
+    setVolName(team.volunteer_name || '')
+    setVolPhone(team.volunteer_phone || '')
   }, [team])
 
   const [cropSrc, setCropSrc] = useState(null)
@@ -277,6 +281,8 @@ function TeamRow({ team, onSaved, onError }) {
       p_group_code: team.group_code,
       p_seed: team.seed,
       p_logo_url: dataUrl,
+      p_volunteer_name: team.volunteer_name || null,
+      p_volunteer_phone: team.volunteer_phone || null,
     })
     if (error) setLocalMsg({ type: 'error', text: `Logo NOT saved: ${error.message}` })
     else {
@@ -295,6 +301,8 @@ function TeamRow({ team, onSaved, onError }) {
       p_group_code: team.group_code,
       p_seed: team.seed,
       p_logo_url: logo || null,
+      p_volunteer_name: volName || null,
+      p_volunteer_phone: volPhone || null,
     })
     setBusy(false)
     if (error) {
@@ -359,6 +367,18 @@ function TeamRow({ team, onSaved, onError }) {
           {logo && <button className="btn secondary small" onClick={() => setLogo('')}>Remove logo</button>}
         </div>
         {cropSrc && <LogoCropper src={cropSrc} onSave={uploadLogo} onCancel={() => setCropSrc(null)} />}
+        <div className="form-row">
+          <div className="grow">
+            <label>Volunteer name</label>
+            <input className="input" value={volName} placeholder="e.g. Arun"
+              onChange={(e) => setVolName(e.target.value)} />
+          </div>
+          <div className="grow">
+            <label>Volunteer WhatsApp number (with country code)</label>
+            <input className="input" value={volPhone} placeholder="e.g. +49 151 23456789"
+              onChange={(e) => setVolPhone(e.target.value)} />
+          </div>
+        </div>
         {localMsg && <div className={`alert ${localMsg.type}`}>{localMsg.text}</div>}
         <div className="form-row">
           <button className="btn small" onClick={save} disabled={busy || !name.trim()}>{busy ? 'Saving…' : 'Save'}</button>

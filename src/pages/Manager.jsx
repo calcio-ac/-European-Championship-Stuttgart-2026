@@ -77,8 +77,15 @@ function Login({ onLogin }) {
 }
 
 function Portal({ session, onLogout }) {
-  const { teams } = useData()
+  const { teams, settings } = useData()
   const [tab, setTab] = useState('squad')
+
+  const deadline = settings.lineup_deadline
+    ? new Date(settings.lineup_deadline).toLocaleString('en-GB', {
+        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit',
+      })
+    : null
+  const pastDeadline = settings.lineup_deadline && new Date() > new Date(settings.lineup_deadline)
 
   const team = teams.find((t) => t.id === session.teamId)
   if (!team) {
@@ -96,6 +103,13 @@ function Portal({ session, onLogout }) {
         <h1 className="page-title" style={{ margin: 0 }}>{team.name} — Manager Portal</h1>
         <button className="btn secondary small" style={{ marginLeft: 'auto' }} onClick={onLogout}>Log out</button>
       </div>
+      {deadline && (
+        <div className={`alert ${pastDeadline ? 'error' : 'info'} mt`}>
+          {pastDeadline
+            ? `The team-list submission deadline (${deadline}) has passed. Please contact the organizers for any changes.`
+            : `Team lists must be submitted by ${deadline}.`}
+        </div>
+      )}
       <div className="tabs mt">
         <button className={tab === 'squad' ? 'active' : ''} onClick={() => setTab('squad')}>Squad</button>
         <button className={tab === 'sheets' ? 'active' : ''} onClick={() => setTab('sheets')}>Team Sheets</button>

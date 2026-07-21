@@ -39,6 +39,7 @@ export default function Match() {
   const { matchId } = useParams()
   const { matches, teamById, teamBySlot, loading } = useData()
   const [lineups, setLineups] = useState([])
+  const [stats, setStats] = useState([])
 
   const match = matches.find((m) => m.id === matchId)
 
@@ -48,6 +49,11 @@ export default function Match() {
       .select('*')
       .eq('match_id', matchId)
       .then(({ data }) => setLineups(data || []))
+    supabase
+      .from('match_stats')
+      .select('*')
+      .eq('match_id', matchId)
+      .then(({ data }) => setStats(data || []))
   }, [matchId])
 
   if (loading) return <div className="spinner" />
@@ -58,6 +64,11 @@ export default function Match() {
   const played = match.home_score != null && match.away_score != null && match.status !== 'scheduled'
   const homeLineup = home ? lineups.find((l) => l.team_id === home.id) : null
   const awayLineup = away ? lineups.find((l) => l.team_id === away.id) : null
+
+  const scorers = stats.filter((s) => s.goals > 0)
+  const homeScorers = home ? scorers.filter((s) => s.team_id === home.id) : []
+  const awayScorers = away ? scorers.filter((s) => s.team_id === away.id) : []
+  const scorerLabel = (s) => `${s.player_name}${s.goals > 1 ? ` (${s.goals})` : ''}`
 
   return (
     <>
@@ -80,6 +91,17 @@ export default function Match() {
             {away ? <Link to={`/team/${away.id}`}>{away.name}</Link> : slotLabel(match.away_slot)}
           </div>
         </div>
+        {(homeScorers.length > 0 || awayScorers.length > 0) && (
+          <div className="scorers">
+            <div className="scorers-side">
+              {homeScorers.map((s) => <div key={s.player_id}>{scorerLabel(s)}</div>)}
+            </div>
+            <div className="scorers-mid muted">Goals</div>
+            <div className="scorers-side right">
+              {awayScorers.map((s) => <div key={s.player_id}>{scorerLabel(s)}</div>)}
+            </div>
+          </div>
+        )}
       </div>
 
       {match.motm_name && (
