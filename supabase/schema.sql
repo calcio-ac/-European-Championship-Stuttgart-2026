@@ -459,7 +459,7 @@ create or replace function admin_update_match(
   p_motm_name text default null, p_motm_photo text default null)
 returns void language plpgsql security definer as $$
 begin
-  perform check_admin();
+  perform check_squad_editor();  -- admin OR coordinator
   update matches set
     home_score = p_home_score,
     away_score = p_away_score,
@@ -485,7 +485,7 @@ create or replace function admin_save_match_stats(p_match_id text, p_stats jsonb
 returns void language plpgsql security definer as $$
 declare item jsonb;
 begin
-  perform check_admin();
+  perform check_squad_editor();
   delete from match_stats where match_id = p_match_id;
   for item in select * from jsonb_array_elements(p_stats) loop
     if coalesce((item->>'goals')::int, 0) + coalesce((item->>'assists')::int, 0)
@@ -502,7 +502,7 @@ end $$;
 create or replace function admin_set_motm(p_match_id text, p_motm_name text, p_motm_photo text)
 returns void language plpgsql security definer as $$
 begin
-  perform check_admin();
+  perform check_squad_editor();
   update matches set
     motm_name = nullif(trim(coalesce(p_motm_name, '')), ''),
     motm_photo = nullif(coalesce(p_motm_photo, ''), '')

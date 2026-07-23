@@ -88,20 +88,23 @@ export default function Admin() {
 }
 
 function CoordinatorDashboard({ email }) {
+  const [tab, setTab] = useState('scores')
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <div>
-          <h1 className="page-title" style={{ margin: 0 }}>Coordinator — Team Squads</h1>
+          <h1 className="page-title" style={{ margin: 0 }}>Coordinator</h1>
           <div className="muted" style={{ fontSize: 13 }}>{email}</div>
         </div>
         <button className="btn secondary small" style={{ marginLeft: 'auto' }} onClick={() => supabase.auth.signOut()}>
           Log out
         </button>
       </div>
-      <div className="mt">
-        <AdminSheetsTab />
+      <div className="tabs mt">
+        <button className={tab === 'scores' ? 'active' : ''} onClick={() => setTab('scores')}>Scores</button>
+        <button className={tab === 'squads' ? 'active' : ''} onClick={() => setTab('squads')}>Team Squads</button>
       </div>
+      {tab === 'scores' ? <ScoresTab /> : <AdminSheetsTab />}
     </>
   )
 }
