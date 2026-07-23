@@ -61,22 +61,27 @@ export default function Team() {
         <div className="alert info">No squad submitted yet — the team manager can add players in the Manager portal.</div>
       ) : (
         <div className="panel">
-          <table className="table">
-            <thead>
-              <tr><th className="num">#</th><th>Name</th><th>Position</th><th>Category</th><th>Role</th></tr>
-            </thead>
-            <tbody>
-              {players.map((p) => (
-                <tr key={p.id}>
-                  <td className="num pts">{p.shirt_number ?? '–'}</td>
-                  <td>{p.name}</td>
-                  <td className="muted">{p.role === 'manager' ? '–' : POSITION_LABELS[p.position] || p.position}</td>
-                  <td className="muted">{p.category === 'non-keralite' ? 'Non-Keralite' : 'Keralite'}</td>
-                  <td className="muted" style={{ textTransform: 'capitalize' }}>{p.role || 'player'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {[
+            ['Players', players.filter((p) => (p.role || 'player') === 'player')],
+            ['Reserves', players.filter((p) => p.role === 'reserve')],
+            ['Manager', players.filter((p) => p.role === 'manager')],
+          ].map(([label, list]) => list.length > 0 && (
+            <div key={label}>
+              <div className="squad-heading">{label}</div>
+              <table className="table">
+                <tbody>
+                  {list.map((p) => (
+                    <tr key={p.id}>
+                      <td className="num pts" style={{ width: 34 }}>{p.shirt_number ?? '–'}</td>
+                      <td>{p.name}</td>
+                      <td className="muted">{label === 'Manager' ? '' : POSITION_LABELS[p.position] || p.position}</td>
+                      <td className="muted" style={{ textAlign: 'right' }}>{p.category === 'non-keralite' ? 'Non-Keralite' : 'Keralite'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ))}
         </div>
       )}
 

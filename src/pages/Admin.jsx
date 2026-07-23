@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { useData, GROUPS, PHASE_LABELS } from '../lib/data.jsx'
+import { useData, GROUPS, PHASE_LABELS, REFEREES } from '../lib/data.jsx'
 import TeamBadge from '../components/TeamBadge.jsx'
 import SquadEditor from '../components/SquadEditor.jsx'
 import LogoCropper from '../components/LogoCropper.jsx'
@@ -570,6 +570,7 @@ function ScoreRow({ match, onSaved, onError }) {
   const [homeTeamId, setHomeTeamId] = useState(match.home_team_id || '')
   const [awayTeamId, setAwayTeamId] = useState(match.away_team_id || '')
   const [showDetails, setShowDetails] = useState(false)
+  const [referee, setReferee] = useState(match.referee || '')
   const [busy, setBusy] = useState(false)
 
   const isKnockout = match.phase !== 'group'
@@ -628,6 +629,22 @@ function ScoreRow({ match, onSaved, onError }) {
       <button className="btn secondary small" onClick={() => setShowDetails(!showDetails)}>
         {showDetails ? 'Hide details' : 'Details'}
       </button>
+      <div className="ref-row">
+        <span className="muted" style={{ fontSize: 12.5, fontWeight: 700 }}>Referee</span>
+        {isKnockout ? (
+          <select className="input" style={{ maxWidth: 200 }} value={referee}
+            onChange={async (e) => {
+              setReferee(e.target.value)
+              const { error } = await supabase.rpc('admin_set_referee', { p_match_id: match.id, p_referee: e.target.value })
+              if (error) onError(error.message); else onSaved(`${match.id} referee set.`)
+            }}>
+            <option value="">Select referee…</option>
+            {REFEREES.map((r) => <option key={r} value={r}>{r}</option>)}
+          </select>
+        ) : (
+          <span style={{ fontWeight: 700 }}>{match.referee || '–'}</span>
+        )}
+      </div>
       {showDetails && (
         <MatchDetails match={match} homeTeam={homeTeam} awayTeam={awayTeam}
           onSaved={onSaved} onError={onError} />

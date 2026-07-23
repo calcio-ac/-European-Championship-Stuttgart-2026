@@ -5,6 +5,8 @@ const DataContext = createContext(null)
 
 export const GROUPS = ['A', 'B', 'C', 'D']
 
+export const REFEREES = ['Oben Takor', 'Marley Michael', 'Joshua']
+
 export const VENUE = {
   address: 'Im Obenhinaus 5, 71384 Weinstadt-Beutelsbach',
   city: 'Stuttgart',

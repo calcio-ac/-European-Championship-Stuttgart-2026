@@ -6,31 +6,56 @@ import TeamBadge from '../components/TeamBadge.jsx'
 
 const POSITION_ORDER = { GK: 0, DF: 1, MF: 2, FW: 3 }
 
+const byPosition = (a, b) =>
+  (POSITION_ORDER[a.position] ?? 9) - (POSITION_ORDER[b.position] ?? 9) ||
+  (a.shirt_number ?? 99) - (b.shirt_number ?? 99)
+
+function PlayerRows({ list }) {
+  return list.map((p) => (
+    <tr key={p.id}>
+      <td className="num pts" style={{ width: 34 }}>{p.shirt_number ?? '–'}</td>
+      <td>{p.name}</td>
+      <td className="muted" style={{ width: 40, textAlign: 'right' }}>{p.position}</td>
+    </tr>
+  ))
+}
+
 function SquadPanel({ team, slot, players }) {
-  const squad = (players || [])
-    .filter((p) => p.role !== 'manager')
-    .sort((a, b) => (POSITION_ORDER[a.position] ?? 9) - (POSITION_ORDER[b.position] ?? 9) ||
-      (a.shirt_number ?? 99) - (b.shirt_number ?? 99))
+  const all = players || []
+  const mains = all.filter((p) => p.role === 'player').sort(byPosition)
+  const reserves = all.filter((p) => p.role === 'reserve').sort(byPosition)
+  const managers = all.filter((p) => p.role === 'manager')
+
   return (
     <div className="panel">
       <div className="lineup-header">
         <TeamBadge team={team} label={slot} />
         {team ? <Link to={`/team/${team.id}`}>{team.name}</Link> : slotLabel(slot)}
       </div>
-      {squad.length > 0 ? (
-        <table className="table">
-          <tbody>
-            {squad.map((p) => (
-              <tr key={p.id}>
-                <td className="num pts" style={{ width: 34 }}>{p.shirt_number ?? '–'}</td>
-                <td>{p.name}{p.role === 'reserve' && <span className="muted"> · reserve</span>}</td>
-                <td className="muted" style={{ width: 40, textAlign: 'right' }}>{p.position}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      ) : (
+      {all.length === 0 ? (
         <div className="alert info">Squad not submitted yet.</div>
+      ) : (
+        <>
+          <div className="squad-heading">Players</div>
+          {mains.length > 0
+            ? <table className="table"><tbody><PlayerRows list={mains} /></tbody></table>
+            : <p className="muted" style={{ margin: '4px 0' }}>None listed.</p>}
+
+          {reserves.length > 0 && (
+            <>
+              <div className="squad-heading">Reserves</div>
+              <table className="table"><tbody><PlayerRows list={reserves} /></tbody></table>
+            </>
+          )}
+          {managers.length > 0 && (
+            <>
+              <div className="squad-heading">Manager</div>
+              <div className="subs-list">
+                {managers.map((m) => <span key={m.id} className="sub-chip">{m.name}</span>)}
+              </div>
+            </>
+          )}
+        </>
       )}
     </div>
   )
@@ -83,6 +108,7 @@ export default function Match() {
       <div className="match-hero panel">
         <div className="meta">
           {matchLabel(match)} · Ground {match.ground} · {match.kickoff}–{match.end_time}
+          {match.referee && <> · Ref: {match.referee}</>}
           {match.status === 'live' && <span className="status-chip live" style={{ marginLeft: 8 }}>LIVE</span>}
           {match.status === 'finished' && <span className="status-chip finished" style={{ marginLeft: 8 }}>FULL TIME</span>}
         </div>

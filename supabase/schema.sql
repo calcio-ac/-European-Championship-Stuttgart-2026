@@ -116,6 +116,7 @@ create table matches (
   status text not null default 'scheduled' check (status in ('scheduled','live','finished')),
   motm_name text,        -- man of the match
   motm_photo text,       -- small data-URL image
+  referee text,          -- assigned referee
   sort_order int not null
 );
 
@@ -509,6 +510,13 @@ begin
   where id = p_match_id;
 end $$;
 
+create or replace function admin_set_referee(p_match_id text, p_referee text)
+returns void language plpgsql security definer as $$
+begin
+  perform check_squad_editor();
+  update matches set referee = nullif(trim(coalesce(p_referee, '')), '') where id = p_match_id;
+end $$;
+
 -- Shift the entire schedule so the first match kicks off at p_first_kickoff.
 -- Every match keeps its duration and its gap to the others.
 create or replace function admin_shift_schedule(p_first_kickoff text)
@@ -658,6 +666,13 @@ insert into matches (id, phase, round, group_code, ground, kickoff, end_time, ho
   ('SF1','semifinal',null,null,1,'16:20','16:50','W-QF1','W-QF3',29),
   ('SF2','semifinal',null,null,2,'16:20','16:50','W-QF2','W-QF4',30),
   ('F','final',null,null,1,'17:10','17:40','W-SF1','W-SF2',31);
+
+-- Swap M03 (09:00) and M21 (13:30), then assign group referees by time slot.
+update matches set home_slot='B2', away_slot='B3', group_code='B' where id='M03';
+update matches set home_slot='D4', away_slot='D2', group_code='D' where id='M21';
+update matches set referee='Oben Takor'    where id in ('M01','M04','M07','M10','M13','M16','M19','M23');
+update matches set referee='Marley Michael' where id in ('M02','M05','M08','M11','M14','M17','M20','M22');
+update matches set referee='Joshua'         where id in ('M03','M06','M09','M12','M15','M18','M21','M24');
 
 -- The 16 participating teams (group seats stay empty until the draw)
 insert into teams (name, short_name) values
