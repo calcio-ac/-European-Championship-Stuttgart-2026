@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useData } from '../lib/data.jsx'
-import SheetEditor from '../components/SheetEditor.jsx'
 import SquadEditor from '../components/SquadEditor.jsx'
 
 const SESSION_KEY = 'managerSession'
@@ -78,7 +77,6 @@ function Login({ onLogin }) {
 
 function Portal({ session, onLogout }) {
   const { teams, settings } = useData()
-  const [tab, setTab] = useState('squad')
 
   const deadline = settings.lineup_deadline
     ? new Date(settings.lineup_deadline).toLocaleString('en-GB', {
@@ -107,14 +105,10 @@ function Portal({ session, onLogout }) {
         <div className={`alert ${pastDeadline ? 'error' : 'info'} mt`}>
           {pastDeadline
             ? `The team-list submission deadline (${deadline}) has passed. Please contact the organizers for any changes.`
-            : `Team lists must be submitted by ${deadline}.`}
+            : `Submit your full squad by ${deadline}. After that, contact the organizers to promote a reserve or transfer a player.`}
         </div>
       )}
-      <div className="tabs mt">
-        <button className={tab === 'squad' ? 'active' : ''} onClick={() => setTab('squad')}>Squad</button>
-        <button className={tab === 'sheets' ? 'active' : ''} onClick={() => setTab('sheets')}>Team Sheets</button>
-      </div>
-      {tab === 'squad' ? (
+      <div className="mt">
         <SquadEditor
           team={team}
           save={(players) =>
@@ -123,17 +117,7 @@ function Portal({ session, onLogout }) {
             })
           }
         />
-      ) : (
-        <SheetEditor
-          team={team}
-          save={(matchId, formation, players) =>
-            supabase.rpc('manager_save_lineup', {
-              p_team_id: team.id, p_password: session.password,
-              p_match_id: matchId, p_formation: formation, p_players: players,
-            })
-          }
-        />
-      )}
+      </div>
     </>
   )
 }

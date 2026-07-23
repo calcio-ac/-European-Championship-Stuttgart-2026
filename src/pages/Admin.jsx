@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useData, GROUPS, PHASE_LABELS } from '../lib/data.jsx'
 import TeamBadge from '../components/TeamBadge.jsx'
-import SheetEditor from '../components/SheetEditor.jsx'
 import SquadEditor from '../components/SquadEditor.jsx'
 import LogoCropper from '../components/LogoCropper.jsx'
 
@@ -136,7 +135,7 @@ function Dashboard({ email }) {
           ['teams', 'Teams & Managers'],
           ['schedule', 'Schedule'],
           ['scores', 'Scores'],
-          ['sheets', 'Team Sheets'],
+          ['sheets', 'Squads'],
           ['knockouts', 'Knockouts'],
           ['settings', 'Info & Settings'],
         ].map(([k, label]) => (
@@ -749,11 +748,11 @@ function AdminSheetsTab() {
   return (
     <>
       <div className="panel" style={{ marginBottom: 14 }}>
-        <h2>Submit a Team Sheet</h2>
+        <h2>Edit a Team's Squad</h2>
         <p className="muted">
-          Fill in or correct a squad and team sheet on behalf of any team — for example when a
-          manager has no access on match day. The sheet appears on the match page exactly as if
-          the manager submitted it.
+          Add or correct any team's squad — including promoting a reserve to player or
+          transferring a player to another team — on behalf of a manager. Changes show up
+          on the team and match pages immediately.
         </p>
         <select className="input" value={teamId} onChange={(e) => setTeamId(e.target.value)} style={{ maxWidth: 340 }}>
           <option value="">Select team…</option>
@@ -765,23 +764,12 @@ function AdminSheetsTab() {
         </select>
       </div>
       {team && (
-        <>
-          <SquadEditor
-            team={team}
-            save={(players) =>
-              supabase.rpc('admin_save_squad', { p_team_id: team.id, p_players: players })
-            }
-          />
-          <div className="mt" />
-          <SheetEditor
-            team={team}
-            save={(matchId, formation, players) =>
-              supabase.rpc('admin_save_lineup', {
-                p_team_id: team.id, p_match_id: matchId, p_formation: formation, p_players: players,
-              })
-            }
-          />
-        </>
+        <SquadEditor
+          team={team}
+          save={(players) =>
+            supabase.rpc('admin_save_squad', { p_team_id: team.id, p_players: players })
+          }
+        />
       )}
     </>
   )

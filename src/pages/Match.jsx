@@ -3,33 +3,34 @@ import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useData, resolveTeam, slotLabel, matchLabel } from '../lib/data.jsx'
 import TeamBadge from '../components/TeamBadge.jsx'
-import Pitch from '../components/Pitch.jsx'
 
-function LineupPanel({ team, slot, lineup, color }) {
-  const subs = (lineup?.players || []).filter((p) => p.role === 'sub')
+const POSITION_ORDER = { GK: 0, DF: 1, MF: 2, FW: 3 }
+
+function SquadPanel({ team, slot, players }) {
+  const squad = (players || [])
+    .filter((p) => p.role !== 'manager')
+    .sort((a, b) => (POSITION_ORDER[a.position] ?? 9) - (POSITION_ORDER[b.position] ?? 9) ||
+      (a.shirt_number ?? 99) - (b.shirt_number ?? 99))
   return (
-    <div>
+    <div className="panel">
       <div className="lineup-header">
         <TeamBadge team={team} label={slot} />
         {team ? <Link to={`/team/${team.id}`}>{team.name}</Link> : slotLabel(slot)}
-        {lineup && <span className="formation">1-{lineup.formation}</span>}
       </div>
-      {lineup ? (
-        <>
-          <Pitch formation={lineup.formation} players={lineup.players} color={color} />
-          {subs.length > 0 && (
-            <div className="subs-list">
-              {subs.map((p, i) => (
-                <span key={i} className="sub-chip">
-                  <b>{p.number ?? '–'}</b>
-                  {p.name}
-                </span>
-              ))}
-            </div>
-          )}
-        </>
+      {squad.length > 0 ? (
+        <table className="table">
+          <tbody>
+            {squad.map((p) => (
+              <tr key={p.id}>
+                <td className="num pts" style={{ width: 34 }}>{p.shirt_number ?? '–'}</td>
+                <td>{p.name}{p.role === 'reserve' && <span className="muted"> · reserve</span>}</td>
+                <td className="muted" style={{ width: 40, textAlign: 'right' }}>{p.position}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       ) : (
-        <div className="alert info">Team sheet not submitted yet.</div>
+        <div className="alert info">Squad not submitted yet.</div>
       )}
     </div>
   )
@@ -38,17 +39,12 @@ function LineupPanel({ team, slot, lineup, color }) {
 export default function Match() {
   const { matchId } = useParams()
   const { matches, teamById, teamBySlot, loading } = useData()
-  const [lineups, setLineups] = useState([])
   const [stats, setStats] = useState([])
+  const [squads, setSquads] = useState({})
 
   const match = matches.find((m) => m.id === matchId)
 
   useEffect(() => {
-    supabase
-      .from('lineups')
-      .select('*')
-      .eq('match_id', matchId)
-      .then(({ data }) => setLineups(data || []))
     supabase
       .from('match_stats')
       .select('*')
@@ -56,14 +52,26 @@ export default function Match() {
       .then(({ data }) => setStats(data || []))
   }, [matchId])
 
+  const home0 = match ? resolveTeam(match, 'home', teamById, teamBySlot) : null
+  const away0 = match ? resolveTeam(match, 'away', teamById, teamBySlot) : null
+
+  useEffect(() => {
+    const ids = [home0?.id, away0?.id].filter(Boolean)
+    if (ids.length === 0) return
+    supabase.from('players').select('*').in('team_id', ids)
+      .then(({ data }) => {
+        const byTeam = {}
+        for (const p of data || []) (byTeam[p.team_id] ||= []).push(p)
+        setSquads(byTeam)
+      })
+  }, [home0?.id, away0?.id])
+
   if (loading) return <div className="spinner" />
   if (!match) return <div className="alert info">Match not found.</div>
 
-  const home = resolveTeam(match, 'home', teamById, teamBySlot)
-  const away = resolveTeam(match, 'away', teamById, teamBySlot)
+  const home = home0
+  const away = away0
   const played = match.home_score != null && match.away_score != null && match.status !== 'scheduled'
-  const homeLineup = home ? lineups.find((l) => l.team_id === home.id) : null
-  const awayLineup = away ? lineups.find((l) => l.team_id === away.id) : null
 
   const scorers = stats.filter((s) => s.goals > 0)
   const homeScorers = home ? scorers.filter((s) => s.team_id === home.id) : []
@@ -118,10 +126,10 @@ export default function Match() {
         </div>
       )}
 
-      <h2 className="page-title mt">Lineups</h2>
+      <h2 className="page-title mt">Squads</h2>
       <div className="pitch-wrap double">
-        <LineupPanel team={home} slot={match.home_slot} lineup={homeLineup} color="home" />
-        <LineupPanel team={away} slot={match.away_slot} lineup={awayLineup} color="away" />
+        <SquadPanel team={home} slot={match.home_slot} players={home && squads[home.id]} />
+        <SquadPanel team={away} slot={match.away_slot} players={away && squads[away.id]} />
       </div>
     </>
   )
