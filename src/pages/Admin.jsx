@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { useData, GROUPS, PHASE_LABELS, REFEREES } from '../lib/data.jsx'
+import { useData, GROUPS, PHASE_LABELS, REFEREES, effectiveRoles } from '../lib/data.jsx'
 import TeamBadge from '../components/TeamBadge.jsx'
 import SquadEditor from '../components/SquadEditor.jsx'
 import LogoCropper from '../components/LogoCropper.jsx'
@@ -778,6 +778,81 @@ function MatchDetails({ match, homeTeam, awayTeam, onSaved, onError }) {
         <button className="btn small" onClick={save} disabled={busy}>{busy ? 'Saving…' : 'Save details'}</button>
       </div>
       {msg && <div className={`alert ${msg.type}`}>{msg.text}</div>}
+
+      <h3 style={{ marginBottom: 4 }}>Player / Reserve for this match</h3>
+      <p className="muted" style={{ fontSize: 12.5, marginTop: 0 }}>
+        Overrides only affect this match onward (later matches keep this list until you change it again).
+      </p>
+      <div className="pitch-wrap double">
+        <MatchRoster match={match} team={homeTeam} onSaved={onSaved} onError={onError} />
+        <MatchRoster match={match} team={awayTeam} onSaved={onSaved} onError={onError} />
+      </div>
+    </div>
+  )
+}
+
+/** Per-match player/reserve override for one team (carries forward to later matches). */
+function MatchRoster({ match, team, onSaved, onError }) {
+  const { matches } = useData()
+  const [roster, setRoster] = useState([]) // effective, editable
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    if (!team) return
+    Promise.all([
+      supabase.from('players').select('*').eq('team_id', team.id).order('shirt_number'),
+      supabase.from('lineups').select('match_id, team_id, players').eq('team_id', team.id),
+    ]).then(([p, o]) => {
+      setRoster(effectiveRoles(p.data || [], o.data || [], matches, match.id).filter((x) => x.role !== 'manager'))
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [team?.id, match.id])
+
+  if (!team) return null
+
+  const toggle = (id) =>
+    setRoster(roster.map((p) => (p.id === id ? { ...p, role: p.role === 'reserve' ? 'player' : 'reserve' } : p)))
+
+  const saveRoster = async () => {
+    setBusy(true)
+    const payload = roster.map((p) => ({ player_id: p.id, role: p.role }))
+    const { error } = await supabase.rpc('admin_save_match_roster', {
+      p_match_id: match.id, p_team_id: team.id, p_roster: payload,
+    })
+    setBusy(false)
+    if (error) onError(error.message)
+    else onSaved(`${team.short_name || team.name} roster set from ${match.id} onward.`)
+  }
+
+  const revert = async () => {
+    setBusy(true)
+    const { error } = await supabase.rpc('admin_clear_match_roster', { p_match_id: match.id, p_team_id: team.id })
+    setBusy(false)
+    if (error) onError(error.message)
+    else onSaved(`${team.short_name || team.name} override for ${match.id} removed.`)
+  }
+
+  return (
+    <div className="panel">
+      <div className="lineup-header">
+        <TeamBadge team={team} size={24} /> {team.name}
+      </div>
+      {roster.map((p) => (
+        <div key={p.id} className="list-row" style={{ padding: '5px 0' }}>
+          <span className="num pts" style={{ width: 28 }}>{p.shirt_number ?? '–'}</span>
+          <span className="grow">{p.name}</span>
+          <button
+            className={`chip-btn ${p.role === 'reserve' ? 'active' : ''}`}
+            onClick={() => toggle(p.id)}
+          >
+            {p.role === 'reserve' ? 'Reserve' : 'Player'}
+          </button>
+        </div>
+      ))}
+      <div className="form-row mt">
+        <button className="btn small" onClick={saveRoster} disabled={busy}>{busy ? 'Saving…' : 'Save roster'}</button>
+        <button className="btn secondary small" onClick={revert} disabled={busy}>Revert to previous</button>
+      </div>
     </div>
   )
 }

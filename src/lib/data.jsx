@@ -130,3 +130,28 @@ export const FORMATIONS = ['2-3-1', '3-2-1', '2-2-2', '3-1-2', '1-3-2', '2-1-3']
 export function formationRows(formation) {
   return formation.split('-').map(Number)
 }
+
+/**
+ * Effective player/reserve roles for one team in a given match.
+ * The most recent override at-or-before this match wins; otherwise the
+ * player's base role applies. Managers always keep the manager role.
+ *   basePlayers: rows from the players table (this team)
+ *   overrides:   lineups rows for this team [{match_id, players:[{player_id, role}]}]
+ *   matches:     all matches (for sort_order)
+ */
+export function effectiveRoles(basePlayers, overrides, matches, currentMatchId) {
+  const curSort = matches.find((m) => m.id === currentMatchId)?.sort_order ?? Infinity
+  const prior = (overrides || [])
+    .map((o) => ({ ...o, sort: matches.find((m) => m.id === o.match_id)?.sort_order ?? -1 }))
+    .filter((o) => o.sort >= 0 && o.sort <= curSort)
+    .sort((a, b) => b.sort - a.sort)
+  const map = {}
+  const latest = prior[0]
+  if (latest && Array.isArray(latest.players)) {
+    for (const x of latest.players) map[x.player_id] = x.role
+  }
+  return (basePlayers || []).map((p) => ({
+    ...p,
+    role: p.role === 'manager' ? 'manager' : (map[p.id] || p.role || 'player'),
+  }))
+}

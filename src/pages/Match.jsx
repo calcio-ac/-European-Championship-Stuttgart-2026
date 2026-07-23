@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { useData, resolveTeam, slotLabel, matchLabel } from '../lib/data.jsx'
+import { useData, resolveTeam, slotLabel, matchLabel, effectiveRoles } from '../lib/data.jsx'
 import TeamBadge from '../components/TeamBadge.jsx'
 
 const POSITION_ORDER = { GK: 0, DF: 1, MF: 2, FW: 3 }
@@ -66,6 +66,7 @@ export default function Match() {
   const { matches, teamById, teamBySlot, loading } = useData()
   const [stats, setStats] = useState([])
   const [squads, setSquads] = useState({})
+  const [overrides, setOverrides] = useState([])
 
   const match = matches.find((m) => m.id === matchId)
 
@@ -89,7 +90,14 @@ export default function Match() {
         for (const p of data || []) (byTeam[p.team_id] ||= []).push(p)
         setSquads(byTeam)
       })
+    supabase.from('lineups').select('match_id, team_id, players').in('team_id', ids)
+      .then(({ data }) => setOverrides(data || []))
   }, [home0?.id, away0?.id])
+
+  const rosterFor = (team) =>
+    team
+      ? effectiveRoles(squads[team.id], overrides.filter((o) => o.team_id === team.id), matches, matchId)
+      : []
 
   if (loading) return <div className="spinner" />
   if (!match) return <div className="alert info">Match not found.</div>
@@ -154,8 +162,8 @@ export default function Match() {
 
       <h2 className="page-title mt">Squads</h2>
       <div className="pitch-wrap double">
-        <SquadPanel team={home} slot={match.home_slot} players={home && squads[home.id]} />
-        <SquadPanel team={away} slot={match.away_slot} players={away && squads[away.id]} />
+        <SquadPanel team={home} slot={match.home_slot} players={rosterFor(home)} />
+        <SquadPanel team={away} slot={match.away_slot} players={rosterFor(away)} />
       </div>
     </>
   )
