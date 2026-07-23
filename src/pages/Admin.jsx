@@ -42,7 +42,7 @@ async function uploadToStorage(file, folder) {
 export default function Admin() {
   const [session, setSession] = useState(null)
   const [ready, setReady] = useState(false)
-  const [isAdmin, setIsAdmin] = useState(null) // null = checking
+  const [role, setRole] = useState(null) // null = checking, 'admin' | 'coordinator' | 'none'
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -55,31 +55,55 @@ export default function Admin() {
 
   useEffect(() => {
     if (!session) {
-      setIsAdmin(null)
+      setRole(null)
       return
     }
     // First signed-in user to open /admin claims the admin role.
-    supabase.rpc('claim_admin').then(({ data, error }) => setIsAdmin(!error && !!data))
+    supabase.rpc('claim_admin').then(async ({ data, error }) => {
+      if (!error && data) return setRole('admin')
+      const { data: coord } = await supabase.rpc('is_coordinator')
+      setRole(coord ? 'coordinator' : 'none')
+    })
   }, [session])
 
   if (!ready) return <div className="spinner" />
   if (!session) return <AdminLogin />
-  if (isAdmin === null) return <div className="spinner" />
+  if (role === null) return <div className="spinner" />
 
-  if (!isAdmin) {
+  if (role === 'none') {
     return (
       <div className="panel" style={{ maxWidth: 460, margin: '30px auto' }}>
-        <h2>Not an admin</h2>
+        <h2>No access</h2>
         <p className="muted">
-          You are signed in as <b>{session.user.email}</b>, but this account has no admin access.
-          An existing admin can grant it in Info &amp; Settings.
+          You are signed in as <b>{session.user.email}</b>, but this account has no admin or
+          coordinator access. An admin can grant it in Info &amp; Settings.
         </p>
         <button className="btn secondary" onClick={() => supabase.auth.signOut()}>Log out</button>
       </div>
     )
   }
 
+  if (role === 'coordinator') return <CoordinatorDashboard email={session.user.email} />
   return <Dashboard email={session.user.email} />
+}
+
+function CoordinatorDashboard({ email }) {
+  return (
+    <>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <div>
+          <h1 className="page-title" style={{ margin: 0 }}>Coordinator — Team Squads</h1>
+          <div className="muted" style={{ fontSize: 13 }}>{email}</div>
+        </div>
+        <button className="btn secondary small" style={{ marginLeft: 'auto' }} onClick={() => supabase.auth.signOut()}>
+          Log out
+        </button>
+      </div>
+      <div className="mt">
+        <AdminSheetsTab />
+      </div>
+    </>
+  )
 }
 
 function AdminLogin() {
@@ -99,8 +123,8 @@ function AdminLogin() {
 
   return (
     <div className="panel" style={{ maxWidth: 440, margin: '30px auto' }}>
-      <h2>Admin Login</h2>
-      <p className="muted">Sign in with the tournament admin account.</p>
+      <h2>Admin / Coordinator Login</h2>
+      <p className="muted">Sign in with your admin or coordinator account.</p>
       <form className="form-grid" onSubmit={signIn}>
         <div>
           <label>Email</label>
@@ -815,12 +839,18 @@ function SettingsTab() {
   const [sections, setSections] = useState(settings.info_sections || [])
   const [newPassword, setNewPassword] = useState('')
   const [newAdminEmail, setNewAdminEmail] = useState('')
+  const [newCoordEmail, setNewCoordEmail] = useState('')
+  const [coordinators, setCoordinators] = useState([])
   const [msg, setMsg] = useState(null)
   const [busy, setBusy] = useState(false)
+
+  const loadCoordinators = () =>
+    supabase.rpc('admin_list_coordinators').then(({ data }) => setCoordinators(data || []))
 
   useEffect(() => {
     setTournament(settings.tournament || {})
     setSections(settings.info_sections || [])
+    loadCoordinators()
   }, [settings])
 
   const saveAll = async () => {
@@ -850,6 +880,18 @@ function SettingsTab() {
       setMsg({ type: 'ok', text: data })
       setNewAdminEmail('')
     }
+  }
+
+  const addCoordinator = async () => {
+    const { data, error } = await supabase.rpc('admin_add_coordinator', { p_email: newCoordEmail })
+    if (error) setMsg({ type: 'error', text: error.message })
+    else { setMsg({ type: 'ok', text: data }); setNewCoordEmail(''); loadCoordinators() }
+  }
+
+  const removeCoordinator = async (email) => {
+    const { data, error } = await supabase.rpc('admin_remove_coordinator', { p_email: email })
+    if (error) setMsg({ type: 'error', text: error.message })
+    else { setMsg({ type: 'ok', text: data }); loadCoordinators() }
   }
 
   return (
@@ -954,6 +996,30 @@ function SettingsTab() {
           </div>
           <button className="btn secondary" onClick={addAdmin} disabled={!newAdminEmail.includes('@')}>
             Grant admin access
+          </button>
+        </div>
+      </div>
+
+      <div className="panel">
+        <h2>Coordinators</h2>
+        <p className="muted">
+          Coordinators can log in and <b>only edit team squads</b> — nothing else. First create their
+          account in Supabase → Authentication → Users (Add user, Auto Confirm), then add the email here.
+        </p>
+        {coordinators.length > 0 && coordinators.map((email) => (
+          <div key={email} className="list-row">
+            <span className="grow" style={{ fontWeight: 700 }}>{email}</span>
+            <button className="btn danger small" onClick={() => removeCoordinator(email)}>Remove</button>
+          </div>
+        ))}
+        <div className="form-row mt">
+          <div className="grow">
+            <label>Coordinator email (account must exist in Supabase Auth)</label>
+            <input className="input" type="email" value={newCoordEmail} placeholder="coordinator@email.com"
+              onChange={(e) => setNewCoordEmail(e.target.value)} />
+          </div>
+          <button className="btn secondary" onClick={addCoordinator} disabled={!newCoordEmail.includes('@')}>
+            Add coordinator
           </button>
         </div>
       </div>
