@@ -419,7 +419,7 @@ function AddTeamRow({ onSaved, onError }) {
 /** Set the password the team's manager uses to log in to /manager. */
 function ManagerPassword({ team, onSaved, onError }) {
   const [password, setPassword] = useState('')
-  const [current, setCurrent] = useState(null) // null = not looked up, '' = none set
+  const [saved, setSaved] = useState(null)  // the password confirmed saved
   const [busy, setBusy] = useState(false)
 
   const save = async () => {
@@ -429,15 +429,15 @@ function ManagerPassword({ team, onSaved, onError }) {
     })
     setBusy(false)
     if (error) return onError(error.message)
-    setCurrent(password) // keep it visible after saving
-    setPassword('')
-    onSaved(`Manager password for ${team.name} is now "${password}". Share it with the manager — they log in by picking "${team.name}" on the Manager page.`)
+    setSaved(password)  // keep the typed password on screen
+    onSaved(`Manager password for ${team.name} saved.`)
   }
 
   const reveal = async () => {
     const { data, error } = await supabase.rpc('admin_get_team_password', { p_team_id: team.id })
     if (error) return onError(error.message)
-    setCurrent(data || '')
+    setPassword(data || '')
+    setSaved(data ? null : '')
   }
 
   return (
@@ -448,7 +448,7 @@ function ManagerPassword({ team, onSaved, onError }) {
       <div className="form-row" style={{ marginTop: 6 }}>
         <div className="grow">
           <input className="input" value={password} placeholder="Password for this team's manager"
-            onChange={(e) => setPassword(e.target.value)} />
+            onChange={(e) => { setPassword(e.target.value); setSaved(null) }} />
         </div>
         <button className="btn small" onClick={save} disabled={busy || password.length < 4}>
           {busy ? 'Saving…' : 'Set password'}
@@ -457,13 +457,15 @@ function ManagerPassword({ team, onSaved, onError }) {
           Show current
         </button>
       </div>
-      {current !== null && (
-        <div className="alert info" style={{ marginTop: 8 }}>
-          {current
-            ? <>Current password: <b style={{ fontFamily: 'monospace', fontSize: 15 }}>{current}</b></>
-            : 'No password set for this team yet.'}
+      {/* live readout: what you typed / what was saved */}
+      {password && (
+        <div className={`alert ${saved === password ? 'ok' : 'info'}`} style={{ marginTop: 8 }}>
+          {saved === password ? 'Saved password: ' : 'Password entered: '}
+          <b style={{ fontFamily: 'monospace', fontSize: 16 }}>{password}</b>
+          {saved === password && ` — share this with ${team.name}'s manager.`}
         </div>
       )}
+      {saved === '' && <div className="alert info" style={{ marginTop: 8 }}>No password set for this team yet.</div>}
     </div>
   )
 }
