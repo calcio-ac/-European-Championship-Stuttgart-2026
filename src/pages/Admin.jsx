@@ -4,6 +4,7 @@ import { useData, GROUPS, PHASE_LABELS, REFEREES, effectiveRoles } from '../lib/
 import TeamBadge from '../components/TeamBadge.jsx'
 import SquadEditor from '../components/SquadEditor.jsx'
 import LogoCropper from '../components/LogoCropper.jsx'
+import SaveButton from '../components/SaveButton.jsx'
 
 /** Downscale an image file to a small square data URL we can store directly in the DB. */
 function fileToDataUrl(file, size = 128) {
@@ -285,6 +286,9 @@ function TeamRow({ team, onSaved, onError }) {
     setVolPhone(team.volunteer_phone || '')
   }, [team])
 
+  const dirty = JSON.stringify([name, shortName, logo, volName, volPhone]) !==
+    JSON.stringify([team.name, team.short_name || '', team.logo_url || '', team.volunteer_name || '', team.volunteer_phone || ''])
+
   const [cropSrc, setCropSrc] = useState(null)
 
   const pickLogo = (file) => {
@@ -407,7 +411,7 @@ function TeamRow({ team, onSaved, onError }) {
         </div>
         {localMsg && <div className={`alert ${localMsg.type}`}>{localMsg.text}</div>}
         <div className="form-row">
-          <button className="btn small" onClick={save} disabled={busy || !name.trim()}>{busy ? 'Saving…' : 'Save'}</button>
+          <SaveButton dirty={dirty} busy={busy} onClick={save} />
           <button className="btn secondary small" onClick={() => setEditing(false)}>Cancel</button>
         </div>
         <ManagerPassword team={team} onSaved={onSaved} onError={onError} />
@@ -571,6 +575,7 @@ function ScoreRow({ match, onSaved, onError }) {
   const [awayTeamId, setAwayTeamId] = useState(match.away_team_id || '')
   const [showDetails, setShowDetails] = useState(false)
   const [referee, setReferee] = useState(match.referee || '')
+  const [saved, setSaved] = useState(() => JSON.stringify([match.home_score ?? '', match.away_score ?? '', match.status, match.home_team_id || '', match.away_team_id || '']))
   const [busy, setBusy] = useState(false)
 
   const isKnockout = match.phase !== 'group'
@@ -578,6 +583,7 @@ function ScoreRow({ match, onSaved, onError }) {
   const awayTeam = teamById[match.away_team_id] || teamBySlot[match.away_slot]
   const homeName = homeTeam?.name || match.home_slot
   const awayName = awayTeam?.name || match.away_slot
+  const dirty = JSON.stringify([homeScore, awayScore, status, homeTeamId, awayTeamId]) !== saved
 
   const save = async () => {
     setBusy(true)
@@ -590,61 +596,75 @@ function ScoreRow({ match, onSaved, onError }) {
       p_away_team_id: isKnockout && awayTeamId ? awayTeamId : null,
     })
     setBusy(false)
-    if (error) onError(error.message)
-    else onSaved(`${match.id} updated.`)
+    if (error) return onError(error.message)
+    setSaved(JSON.stringify([homeScore, awayScore, status, homeTeamId, awayTeamId]))
+    onSaved(`${match.id} updated.`)
+  }
+
+  const saveReferee = async (ref) => {
+    setReferee(ref)
+    const { error } = await supabase.rpc('admin_set_referee', { p_match_id: match.id, p_referee: ref })
+    if (error) onError(error.message); else onSaved(`${match.id} referee set.`)
   }
 
   return (
-    <div className="list-row">
-      <span className="muted" style={{ width: 88, fontSize: 12.5, fontWeight: 700 }}>
-        {match.id} · {match.kickoff}<br />G{match.ground}
-      </span>
-      {isKnockout ? (
-        <select className="input grow" value={homeTeamId} onChange={(e) => setHomeTeamId(e.target.value)}>
-          <option value="">{match.home_slot} (auto)</option>
-          {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-        </select>
-      ) : (
-        <span className="grow" style={{ fontWeight: 700 }}>{homeName}</span>
-      )}
-      <input className="input" style={{ width: 58 }} type="number" min="0" placeholder="–"
-        value={homeScore} onChange={(e) => setHomeScore(e.target.value)} />
-      <span className="muted">:</span>
-      <input className="input" style={{ width: 58 }} type="number" min="0" placeholder="–"
-        value={awayScore} onChange={(e) => setAwayScore(e.target.value)} />
-      {isKnockout ? (
-        <select className="input grow" value={awayTeamId} onChange={(e) => setAwayTeamId(e.target.value)}>
-          <option value="">{match.away_slot} (auto)</option>
-          {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-        </select>
-      ) : (
-        <span className="grow" style={{ fontWeight: 700, textAlign: 'right' }}>{awayName}</span>
-      )}
-      <select className="input" style={{ width: 118 }} value={status} onChange={(e) => setStatus(e.target.value)}>
-        <option value="scheduled">Scheduled</option>
-        <option value="live">Live</option>
-        <option value="finished">Finished</option>
-      </select>
-      <button className="btn small" onClick={save} disabled={busy}>{busy ? '…' : 'Save'}</button>
-      <button className="btn secondary small" onClick={() => setShowDetails(!showDetails)}>
-        {showDetails ? 'Hide details' : 'Details'}
-      </button>
-      <div className="ref-row">
-        <span className="muted" style={{ fontSize: 12.5, fontWeight: 700 }}>Referee</span>
+    <div className="score-card">
+      <div className="score-card-head">
+        <span>{match.id} · {match.kickoff} · Ground {match.ground}</span>
+        {status === 'live' && <span className="status-chip live">LIVE</span>}
+        {status === 'finished' && <span className="status-chip finished">FT</span>}
+      </div>
+
+      <div className="score-side">
         {isKnockout ? (
-          <select className="input" style={{ maxWidth: 200 }} value={referee}
-            onChange={async (e) => {
-              setReferee(e.target.value)
-              const { error } = await supabase.rpc('admin_set_referee', { p_match_id: match.id, p_referee: e.target.value })
-              if (error) onError(error.message); else onSaved(`${match.id} referee set.`)
-            }}>
+          <select className="input" value={homeTeamId} onChange={(e) => setHomeTeamId(e.target.value)}>
+            <option value="">{match.home_slot} (auto)</option>
+            {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </select>
+        ) : (
+          <span className="score-team">{homeName}</span>
+        )}
+        <input className="input score-input" type="number" min="0" inputMode="numeric" placeholder="–"
+          value={homeScore} onChange={(e) => setHomeScore(e.target.value)} />
+      </div>
+      <div className="score-side">
+        {isKnockout ? (
+          <select className="input" value={awayTeamId} onChange={(e) => setAwayTeamId(e.target.value)}>
+            <option value="">{match.away_slot} (auto)</option>
+            {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </select>
+        ) : (
+          <span className="score-team">{awayName}</span>
+        )}
+        <input className="input score-input" type="number" min="0" inputMode="numeric" placeholder="–"
+          value={awayScore} onChange={(e) => setAwayScore(e.target.value)} />
+      </div>
+
+      <div className="score-fields">
+        <label>
+          <span>Status</span>
+          <select className="input" value={status} onChange={(e) => setStatus(e.target.value)}>
+            <option value="scheduled">Scheduled</option>
+            <option value="live">Live</option>
+            <option value="finished">Finished</option>
+          </select>
+        </label>
+        <label>
+          <span>Referee</span>
+          <select className="input" value={referee} onChange={(e) => saveReferee(e.target.value)}>
             <option value="">Select referee…</option>
             {REFEREES.map((r) => <option key={r} value={r}>{r}</option>)}
           </select>
-        ) : (
-          <span style={{ fontWeight: 700 }}>{match.referee || '–'}</span>
-        )}
+        </label>
       </div>
+
+      <div className="score-actions">
+        <SaveButton dirty={dirty} busy={busy} onClick={save} small={false} />
+        <button className="btn secondary" onClick={() => setShowDetails(!showDetails)}>
+          {showDetails ? 'Hide details' : 'Details'}
+        </button>
+      </div>
+
       {showDetails && (
         <MatchDetails match={match} homeTeam={homeTeam} awayTeam={awayTeam}
           onSaved={onSaved} onError={onError} />
@@ -659,6 +679,7 @@ function MatchDetails({ match, homeTeam, awayTeam, onSaved, onError }) {
   const [stats, setStats] = useState({})
   const [motmId, setMotmId] = useState('')
   const [motmPhoto, setMotmPhoto] = useState(match.motm_photo || '')
+  const [saved, setSaved] = useState('')
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState(null)
 
@@ -679,6 +700,7 @@ function MatchDetails({ match, homeTeam, awayTeam, onSaved, onError }) {
       setStats(st)
       const motm = squad.find((x) => x.name === match.motm_name)
       setMotmId(motm ? motm.id : '')
+      setSaved(JSON.stringify([st, motm ? motm.id : '', match.motm_photo || '']))
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [match.id, homeTeam?.id, awayTeam?.id])
@@ -693,6 +715,7 @@ function MatchDetails({ match, homeTeam, awayTeam, onSaved, onError }) {
   const getStat = (pid) => stats[pid] || { goals: 0, assists: 0, yellows: 0, reds: 0 }
   const setStat = (pid, field, val) =>
     setStats({ ...stats, [pid]: { ...getStat(pid), [field]: val === '' ? 0 : Math.max(0, Number(val)) } })
+  const dirty = JSON.stringify([stats, motmId, motmPhoto]) !== saved
 
   const save = async () => {
     setBusy(true)
@@ -713,6 +736,7 @@ function MatchDetails({ match, homeTeam, awayTeam, onSaved, onError }) {
       setMsg({ type: 'error', text: error.message })
       onError(error.message)
     } else {
+      setSaved(JSON.stringify([stats, motmId, motmPhoto]))
       setMsg({ type: 'ok', text: 'Match details saved.' })
       onSaved(`${match.id} details saved.`)
     }
@@ -775,7 +799,7 @@ function MatchDetails({ match, homeTeam, awayTeam, onSaved, onError }) {
             }} />
         </div>
         {motmPhoto && <img src={motmPhoto} alt="Man of the match" className="badge" style={{ width: 40, height: 40 }} />}
-        <button className="btn small" onClick={save} disabled={busy}>{busy ? 'Saving…' : 'Save details'}</button>
+        <SaveButton dirty={dirty} busy={busy} onClick={save} saveLabel="Save details" savedLabel="Details saved" />
       </div>
       {msg && <div className={`alert ${msg.type}`}>{msg.text}</div>}
 
@@ -795,7 +819,10 @@ function MatchDetails({ match, homeTeam, awayTeam, onSaved, onError }) {
 function MatchRoster({ match, team, onSaved, onError }) {
   const { matches } = useData()
   const [roster, setRoster] = useState([]) // effective, editable
+  const [saved, setSaved] = useState('[]')
   const [busy, setBusy] = useState(false)
+
+  const rosterSnap = (r) => JSON.stringify(r.map((p) => [p.id, p.role]))
 
   useEffect(() => {
     if (!team) return
@@ -803,13 +830,16 @@ function MatchRoster({ match, team, onSaved, onError }) {
       supabase.from('players').select('*').eq('team_id', team.id).order('shirt_number'),
       supabase.from('lineups').select('match_id, team_id, players').eq('team_id', team.id),
     ]).then(([p, o]) => {
-      setRoster(effectiveRoles(p.data || [], o.data || [], matches, match.id).filter((x) => x.role !== 'manager'))
+      const eff = effectiveRoles(p.data || [], o.data || [], matches, match.id).filter((x) => x.role !== 'manager')
+      setRoster(eff)
+      setSaved(rosterSnap(eff))
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [team?.id, match.id])
 
   if (!team) return null
 
+  const dirty = rosterSnap(roster) !== saved
   const toggle = (id) =>
     setRoster(roster.map((p) => (p.id === id ? { ...p, role: p.role === 'reserve' ? 'player' : 'reserve' } : p)))
 
@@ -820,8 +850,9 @@ function MatchRoster({ match, team, onSaved, onError }) {
       p_match_id: match.id, p_team_id: team.id, p_roster: payload,
     })
     setBusy(false)
-    if (error) onError(error.message)
-    else onSaved(`${team.short_name || team.name} roster set from ${match.id} onward.`)
+    if (error) return onError(error.message)
+    setSaved(rosterSnap(roster))
+    onSaved(`${team.short_name || team.name} roster set from ${match.id} onward.`)
   }
 
   const revert = async () => {
@@ -850,7 +881,7 @@ function MatchRoster({ match, team, onSaved, onError }) {
         </div>
       ))}
       <div className="form-row mt">
-        <button className="btn small" onClick={saveRoster} disabled={busy}>{busy ? 'Saving…' : 'Save roster'}</button>
+        <SaveButton dirty={dirty} busy={busy} onClick={saveRoster} saveLabel="Save roster" savedLabel="Roster saved" />
         <button className="btn secondary small" onClick={revert} disabled={busy}>Revert to previous</button>
       </div>
     </div>
@@ -947,6 +978,9 @@ function SettingsTab() {
     setSections(settings.info_sections || [])
     loadCoordinators()
   }, [settings])
+
+  const settingsDirty = JSON.stringify([tournament, sections]) !==
+    JSON.stringify([settings.tournament || {}, settings.info_sections || []])
 
   const saveAll = async () => {
     setBusy(true)
@@ -1067,7 +1101,7 @@ function SettingsTab() {
         })}
         <div className="form-row mt">
           <button className="btn secondary" onClick={() => setSections([...sections, { title: '', body: '' }])}>+ Add section</button>
-          <button className="btn" onClick={saveAll} disabled={busy}>{busy ? 'Saving…' : 'Save all settings'}</button>
+          <SaveButton dirty={settingsDirty} busy={busy} onClick={saveAll} saveLabel="Save all settings" savedLabel="Settings saved" small={false} />
         </div>
       </div>
 

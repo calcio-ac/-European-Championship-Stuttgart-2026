@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useData } from '../lib/data.jsx'
 import SquadEditor from '../components/SquadEditor.jsx'
+import TeamBadge from '../components/TeamBadge.jsx'
+import { WhatsAppIcon } from '../components/Icons.jsx'
 
 const SESSION_KEY = 'managerSession'
 
@@ -118,6 +120,36 @@ function Portal({ session, onLogout }) {
           }
         />
       </div>
+      <VolunteersPanel />
     </>
+  )
+}
+
+/** Team volunteer contacts — visible only inside the manager portal, not on the public site. */
+function VolunteersPanel() {
+  const { teams } = useData()
+  const withVol = teams.filter((t) => t.volunteer_name || t.volunteer_phone)
+  if (withVol.length === 0) return null
+  return (
+    <div className="panel mt">
+      <h2>Team Volunteers</h2>
+      <p className="muted">Contact any team's volunteer directly. These details are only visible to logged-in managers.</p>
+      {withVol.map((t) => (
+        <div key={t.id} className="list-row">
+          <TeamBadge team={t} size={26} />
+          <span className="grow" style={{ fontWeight: 700 }}>
+            {t.name}
+            {t.volunteer_name && <span className="muted" style={{ fontWeight: 600 }}> · {t.volunteer_name}</span>}
+          </span>
+          {t.volunteer_phone && (
+            <a className="btn whatsapp-btn small"
+              href={`https://wa.me/${t.volunteer_phone.replace(/[^\d]/g, '')}`}
+              target="_blank" rel="noreferrer">
+              <WhatsAppIcon width={16} height={16} /> WhatsApp
+            </a>
+          )}
+        </div>
+      ))}
+    </div>
   )
 }

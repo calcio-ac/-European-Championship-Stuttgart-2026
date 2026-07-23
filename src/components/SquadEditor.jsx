@@ -1,5 +1,10 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import SaveButton from './SaveButton.jsx'
+
+const snap = (players) => JSON.stringify(
+  players.filter((p) => p.name?.trim()).map((p) => [p.id, p.name.trim(), p.shirt_number ?? '', p.position, p.category, p.role])
+)
 
 const POSITIONS = ['GK', 'DF', 'MF', 'FW']
 const CATEGORIES = [
@@ -18,13 +23,16 @@ const ROLES = [
  */
 export default function SquadEditor({ team, save }) {
   const [players, setPlayers] = useState([])
+  const [saved, setSaved] = useState('[]')
   const [msg, setMsg] = useState(null)
   const [busy, setBusy] = useState(false)
 
   const load = () =>
     supabase.from('players').select('*').eq('team_id', team.id).order('shirt_number')
-      .then(({ data }) => setPlayers(data || []))
+      .then(({ data }) => { setPlayers(data || []); setSaved(snap(data || [])) })
   useEffect(() => { load(); setMsg(null) }, [team.id])
+
+  const dirty = snap(players) !== saved
 
   const update = (i, field, value) =>
     setPlayers(players.map((p, j) => (j === i ? { ...p, [field]: value } : p)))
@@ -80,7 +88,7 @@ export default function SquadEditor({ team, save }) {
         <button className="btn secondary" onClick={() => setPlayers([...players, { name: '', shirt_number: '', position: 'MF', category: 'keralite', role: 'player' }])}>
           + Add person
         </button>
-        <button className="btn" onClick={submit} disabled={busy}>{busy ? 'Saving…' : 'Save squad'}</button>
+        <SaveButton dirty={dirty} busy={busy} onClick={submit} saveLabel="Save squad" savedLabel="Squad saved" small={false} />
       </div>
       {msg && <div className={`alert ${msg.type}`}>{msg.text}</div>}
     </div>

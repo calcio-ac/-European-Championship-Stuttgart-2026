@@ -4,7 +4,6 @@ import { supabase } from '../lib/supabase'
 import { useData } from '../lib/data.jsx'
 import TeamBadge from '../components/TeamBadge.jsx'
 import MatchCard from '../components/MatchCard.jsx'
-import { WhatsAppIcon } from '../components/Icons.jsx'
 
 const POSITION_LABELS = { GK: 'Goalkeeper', DF: 'Defender', MF: 'Midfielder', FW: 'Forward' }
 
@@ -42,18 +41,6 @@ export default function Team() {
           <h1 className="page-title" style={{ margin: 0 }}>{team.name}</h1>
           <div className="muted">{team.group_code ? `Group ${team.group_code}` : 'Group draw pending'}</div>
         </div>
-        {team.volunteer_phone && (
-          <a
-            className="btn whatsapp-btn"
-            style={{ marginLeft: 'auto' }}
-            href={`https://wa.me/${team.volunteer_phone.replace(/[^\d]/g, '')}`}
-            target="_blank"
-            rel="noreferrer"
-          >
-            <WhatsAppIcon width={18} height={18} />
-            Contact volunteer{team.volunteer_name ? ` · ${team.volunteer_name}` : ''}
-          </a>
-        )}
       </div>
 
       <h2 className="page-title mt">Squad</h2>
