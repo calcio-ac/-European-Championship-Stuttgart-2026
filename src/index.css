@@ -164,7 +164,7 @@ input, select, textarea { font-family: var(--font); }
 .table .pts { font-weight: 800; }
 
 /* ---------- Pitch ---------- */
-.pitch-wrap { display: grid; gap: 16px; grid-template-columns: 1fr; }
+.pitch-wrap { display: grid; gap: 16px; grid-template-columns: 1fr; align-items: start; }
 @media (min-width: 760px) { .pitch-wrap.double { grid-template-columns: 1fr 1fr; } }
 .pitch {
   position: relative; border-radius: 14px; overflow: hidden; aspect-ratio: 3 / 4;
